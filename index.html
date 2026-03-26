@@ -112,7 +112,8 @@ input[type="datetime-local"] { --ampm:none; }
 /* MODAL */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); z-index:200; display:none; align-items:center; justify-content:center; }
 .modal-overlay.show { display:flex; }
-.modal { background:var(--card); border:1px solid var(--border2); border-radius:16px; width:700px; max-width:96vw; max-height:92vh; overflow-y:auto; animation:modalIn 0.22s ease; }
+.modal { background:var(--card); border:1px solid var(--border2); border-radius:16px; width:700px; max-width:96vw; max-height:92vh; overflow-y:scroll; animation:modalIn 0.22s ease; scrollbar-width:none; -ms-overflow-style:none; }
+.modal::-webkit-scrollbar { display:none; }
 @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
 .modal-tabs { display:flex; gap:4px; }
