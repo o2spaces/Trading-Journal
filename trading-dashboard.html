@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Journal Dashboard</title>
+<link rel="icon" href="ninja.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#0d1117; --card:#161b22; --card2:#1c2128;
+  --border:#21262d; --border2:#30363d;
+  --text:#e6edf3; --muted:#7d8590; --muted2:#a0aab8;
+  --green:#3fb950; --red:#f85149; --blue:#58a6ff;
+  --cyan:#39d0d8; --purple:#bc8cff; --orange:#ffa657; --yellow:#ffd166;
+  --accent:#1f6feb;
+}
+body { font-family:'Segoe UI',-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* HEADER */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:100;
+}
+.header-left { display:flex; align-items:center; gap:12px; }
+.header-logo { color:var(--green); font-size:20px; }
+.header-title { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
+.header-sub { font-size:11px; color:var(--muted); }
+.header-right { display:flex; align-items:center; gap:12px; }
+
+/* PORTFOLIO TAB BAR */
+.port-bar {
+  display:flex; align-items:center; gap:0; background:var(--card);
+  border-bottom:1px solid var(--border); padding:0 24px; overflow-x:auto;
+}
+.port-tab {
+  display:flex; align-items:center; gap:7px; padding:11px 18px;
+  font-size:13px; font-weight:500; color:var(--muted); border:none;
+  background:transparent; cursor:pointer; border-bottom:2px solid transparent;
+  transition:all 0.15s; white-space:nowrap;
+}
+.port-tab:hover { color:var(--text); }
+.port-tab.active { color:var(--blue); border-bottom-color:var(--blue); }
+.port-tab .tab-dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+.port-tab.active .tab-dot { box-shadow:0 0 5px currentColor; }
+.port-tab-add { padding:11px 14px; font-size:18px; color:var(--muted); border:none; background:transparent; cursor:pointer; transition:color 0.15s; }
+.port-tab-add:hover { color:var(--green); }
+
+/* MAIN */
+.main { padding:16px 28px 28px; max-width:1400px; margin:0 auto; }
+
+/* PORT LABEL */
+.port-label-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 28px 0; max-width:1400px; margin:0 auto;
+}
+.port-name-badge { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:var(--blue); }
+.port-color-dot { width:10px; height:10px; border-radius:50%; }
+
+/* STATS */
+.stats-grid, .stats-grid2 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:16px 18px; display:flex; align-items:flex-start; justify-content:space-between;
+  transition:border-color 0.2s;
+}
+.stat-card:hover { border-color:var(--border2); }
+.stat-label { font-size:11px; color:var(--muted2); margin-bottom:7px; font-weight:500; }
+.stat-value { font-size:24px; font-weight:700; letter-spacing:-0.5px; line-height:1; }
+.stat-value.green  { color:var(--green); }
+.stat-value.red    { color:var(--red); }
+.stat-value.blue   { color:var(--blue); }
+.stat-value.orange { color:var(--orange); }
+.stat-sub { font-size:11px; color:var(--muted); margin-top:4px; }
+.stat-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.stat-icon.green  { background:rgba(63,185,80,0.15); }
+.stat-icon.blue   { background:rgba(88,166,255,0.15); }
+.stat-icon.orange { background:rgba(255,166,87,0.15); }
+.stat-icon.red    { background:rgba(248,81,73,0.15); }
+
+/* CHARTS */
+.charts-row { display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:14px; }
+.chart-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+.chart-title { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; margin-bottom:14px; }
+.chart-title-icon { color:var(--green); }
+
+/* WIN RATE */
+.winrate-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.winrate-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.winrate-title { font-size:13px; font-weight:600; margin-bottom:12px; }
+.winrate-sub { font-size:10px; color:var(--muted); margin-top:6px; text-align:center; }
+.bar-item { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.bar-label { font-size:11px; color:var(--muted2); width:58px; flex-shrink:0; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bar-track { flex:1; height:16px; background:var(--bg); border-radius:4px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; transition:width 0.8s ease; }
+.bar-pct { font-size:10px; color:var(--muted); width:28px; flex-shrink:0; }
+
+/* BUTTONS */
+.add-btn { display:flex; align-items:center; gap:7px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+.add-btn:hover { background:#388bfd; transform:translateY(-1px); }
+
+/* DATETIME WRAPPER */
+.dt-wrap { position:relative; }
+.dt-wrap input[type="datetime-local"] { width:100%; padding-right:34px; }
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field { display:none !important; }
+input[type="datetime-local"] { --ampm:none; }
+.dt-icon { position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:14px; cursor:pointer; user-select:none; opacity:0.55; transition:opacity 0.15s; }
+.dt-icon:hover { opacity:1; }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); z-index:200; display:none; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--card); border:1px solid var(--border2); border-radius:16px; width:700px; max-width:96vw; max-height:92vh; overflow-y:auto; animation:modalIn 0.22s ease; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+.modal-tabs { display:flex; gap:4px; }
+.modal-tab { padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.15s; }
+.modal-tab.active { background:var(--accent); color:#fff; }
+.modal-close { width:30px; height:30px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.modal-close:hover { background:var(--border); color:var(--text); }
+.modal-body { padding:22px; }
+
+/* FORM */
+.form-row { display:grid; gap:12px; margin-bottom:12px; }
+.form-row.cols2 { grid-template-columns:1fr 1fr; }
+.form-row.cols3 { grid-template-columns:1fr 1fr 1fr; }
+.form-row.cols4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.field label { display:block; font-size:11px; color:var(--muted2); margin-bottom:5px; font-weight:500; letter-spacing:0.3px; }
+.field input, .field select { width:100%; background:var(--bg); border:1px solid var(--border2); border-radius:8px; padding:9px 11px; color:var(--text); font-size:13px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; -webkit-appearance:none; }
+.field input:focus, .field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(31,111,235,0.15); }
+.field select option { background:var(--card2); }
+
+/* Port select in form */
+.port-select-row { display:flex; align-items:center; gap:10px; background:rgba(31,111,235,0.08); border:1px solid rgba(31,111,235,0.3); border-radius:10px; padding:11px 14px; margin-bottom:12px; }
+.port-select-row label { font-size:12px; color:var(--blue); font-weight:600; white-space:nowrap; }
+.port-select-row select { flex:1; background:var(--bg); border:1px solid var(--border2); border-radius:8px; padding:8px 10px; color:var(--text); font-size:13px; outline:none; cursor:pointer; }
+
+/* Price box */
+.price-box { background:var(--bg); border:1px solid rgba(88,166,255,0.4); border-radius:10px; padding:12px 14px 8px; margin-bottom:12px; }
+.price-box-title { font-size:11px; font-weight:700; color:var(--blue); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+
+/* Direction display */
+.direction-display { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--border2); border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+.dir-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.dir-value { font-size:14px; font-weight:700; }
+.dir-value.buy  { color:var(--green); }
+.dir-value.sell { color:var(--red); }
+
+/* Auto badge */
+.auto-badge { font-size:10px; background:rgba(88,166,255,0.15); color:var(--blue); padding:1px 6px; border-radius:4px; margin-left:5px; }
+
+.save-btn { width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; margin-top:6px; }
+.save-btn:hover { background:#388bfd; }
+.save-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* Sections */
+.settings-section { display:none; }
+.settings-section.show { display:block; }
+.log-section { display:none; }
+.log-section.show { display:block; }
+
+.config-banner { background:rgba(31,111,235,0.1); border:1px solid rgba(31,111,235,0.3); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:var(--muted2); line-height:1.7; }
+.config-banner strong { color:var(--blue); }
+.config-banner code { background:var(--bg); padding:1px 6px; border-radius:4px; font-size:11px; color:var(--cyan); }
+
+/* Portfolio Manager Modal */
+.pm-list { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; min-height:40px; }
+.pm-item { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--border2); border-radius:8px; padding:10px 14px; }
+.pm-color { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+.pm-name { flex:1; font-size:13px; font-weight:500; }
+.pm-meta { font-size:11px; color:var(--muted); }
+.pm-del { width:26px; height:26px; border-radius:5px; border:1px solid var(--border2); background:transparent; color:var(--muted); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.pm-del:hover { border-color:var(--red); color:var(--red); background:rgba(248,81,73,0.1); }
+.pm-add-area { background:var(--bg); border:1px solid var(--border2); border-radius:10px; padding:14px; }
+.pm-add-title { font-size:11px; color:var(--muted2); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+.color-picker-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.cp-dot { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:all 0.15s; }
+.cp-dot.sel { border-color:#fff; transform:scale(1.18); }
+.pm-form-row { display:grid; grid-template-columns:1fr 140px auto; gap:8px; }
+.pm-form-row input { background:var(--card); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; }
+.pm-form-row input:focus { border-color:var(--accent); }
+.pm-add-btn { padding:9px 14px; background:var(--green); color:#000; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+/* Portfolio edit panel */
+.pm-edit-panel { background:rgba(31,111,235,0.08); border:1px solid rgba(31,111,235,0.35); border-radius:10px; padding:14px; margin-bottom:12px; }
+.pm-edit-title { font-size:11px; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+.pm-edit-grid { display:grid; grid-template-columns:1fr 130px; gap:8px; margin-bottom:10px; }
+.pm-edit-grid input { background:var(--bg); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; }
+.pm-edit-grid input:focus { border-color:var(--accent); }
+.pm-edit-actions { display:flex; gap:8px; }
+.pm-edit-save { flex:1; padding:8px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+.pm-edit-cancel { padding:8px 14px; background:transparent; color:var(--muted); border:1px solid var(--border2); border-radius:8px; font-size:13px; cursor:pointer; }
+.pm-edit-btn { width:26px; height:26px; border-radius:5px; border:1px solid var(--border2); background:transparent; color:var(--muted); cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; transition:all 0.15s; margin-right:4px; }
+.pm-edit-btn:hover { border-color:var(--blue); color:var(--blue); background:rgba(88,166,255,0.1); }
+/* Commission box */
+.comm-box { background:var(--bg); border:1px solid rgba(255,166,87,0.4); border-radius:10px; padding:12px 14px 8px; margin-bottom:12px; }
+.comm-box-title { font-size:11px; font-weight:700; color:var(--orange); letter-spacing:1px; text-transform:uppercase; margin-bottom:10px; }
+.comm-display { font-size:12px; color:var(--orange); margin-top:6px; font-weight:600; min-height:18px; }
+
+/* Toast */
+.toast { position:fixed; bottom:22px; right:22px; background:var(--card2); border:1px solid var(--border2); border-radius:10px; padding:11px 16px; font-size:13px; z-index:999; transform:translateY(80px); opacity:0; transition:all 0.3s; display:flex; align-items:center; gap:8px; min-width:210px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-color:rgba(63,185,80,0.4); }
+.toast.error   { border-color:rgba(248,81,73,0.4); }
+
+/* Conn */
+.conn-status { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); }
+.conn-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+.conn-dot.connected { background:var(--green); box-shadow:0 0 5px var(--green); }
+.conn-dot.error { background:var(--red); }
+
+/* Loading */
+.loading-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:300; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+.loading-overlay.show { display:flex; }
+.spinner { width:38px; height:38px; border:3px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.loading-text { font-size:13px; color:var(--muted2); }
+
+/* Empty */
+.no-portfolio { text-align:center; padding:70px 20px; color:var(--muted); font-size:14px; line-height:2.2; }
+.no-portfolio .no-icon { font-size:36px; display:block; margin-bottom:10px; opacity:0.35; }
+
+@media(max-width:900px){
+  .stats-grid,.stats-grid2,.winrate-grid{grid-template-columns:repeat(2,1fr);}
+  .charts-row{grid-template-columns:1fr;}
+  .main{padding:12px;}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">กำลังโหลดข้อมูล...</div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">
+  <img src="ninja.png" alt="ninja" style="width:20px;height:20px;">
+</div>
+    <div>
+      <div class="header-title">Trading Journal Dashboard</div>
+      <div class="header-sub">Analytics &amp; Performance Metrics</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-status">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connText">Demo Mode</span>
+    </div>
+    <button class="add-btn" onclick="openModal()">+ Add Data / Settings</button>
+  </div>
+</div>
+
+<!-- PORTFOLIO TABS -->
+<div class="port-bar" id="portBar">
+  <button class="port-tab-add" title="เพิ่มพอร์ตใหม่" onclick="openPm()">＋</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashContent">
+  <div class="no-portfolio" id="noPortMsg">
+    <span class="no-icon">📂</span>
+    ยังไม่มีพอร์ต<br>
+    กดปุ่ม <strong style="color:var(--green);font-size:18px;">＋</strong> ด้านบนเพื่อสร้างพอร์ตแรก
+  </div>
+
+  <div id="dashMain" style="display:none;">
+    <div class="port-label-bar">
+      <div class="port-name-badge">
+        <div class="port-color-dot" id="portColorDot"></div>
+        <span id="portNameLabel">—</span>
+      </div>
+      <button onclick="openPm()" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'">⚙ จัดการพอร์ต</button>
+    </div>
+
+    <div class="main">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Current Balance</div><div class="stat-value" id="statBalance">$0.00</div><div class="stat-sub" id="statBalanceSub">Initial: $0</div></div><div class="stat-icon blue">💼</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Net PnL</div><div class="stat-value green" id="statPnl">+$0.00</div><div class="stat-sub" id="statPnlSub">+0.00% Return</div></div><div class="stat-icon green">📈</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Win Rate</div><div class="stat-value blue" id="statWinRate">0.0%</div><div class="stat-sub" id="statWinSub">0 Total Trades</div></div><div class="stat-icon blue">🎯</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Max Drawdown</div><div class="stat-value red" id="statDrawdown">0.00%</div><div class="stat-sub">Peak to Trough drop</div></div><div class="stat-icon red">⚠️</div></div>
+      </div>
+      <div class="stats-grid2">
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Profit Factor</div><div class="stat-value green" id="statPF">0.00</div><div class="stat-sub">Gross Profit / Gross Loss</div></div><div class="stat-icon green">〰️</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Expectancy</div><div class="stat-value green" id="statExpect">$0.00</div><div class="stat-sub">Expected return per trade</div></div><div class="stat-icon blue">〰️</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Average RRR</div><div class="stat-value blue" id="statRRR">1 : 0.00</div><div class="stat-sub">Risk Reward Ratio</div></div><div class="stat-icon blue">〰️</div></div>
+        <div class="stat-card"><div class="stat-info"><div class="stat-label">Avg Holding Time</div><div class="stat-value" id="statHold">0 Hrs</div><div class="stat-sub">Entry to Exit duration</div></div><div class="stat-icon orange">🕐</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card"><div class="chart-title"><span class="chart-title-icon">〰️</span>Equity Curve &amp; Drawdown</div><div style="height:210px;position:relative;"><canvas id="equityChart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title"><span class="chart-title-icon">〰️</span>Monthly PnL</div><div style="height:210px;position:relative;"><canvas id="monthlyChart"></canvas></div></div>
+      </div>
+      <div class="winrate-grid">
+        <div class="winrate-card"><div class="winrate-title">Win Rate by Asset</div><div id="wrAsset"></div><div class="winrate-sub">Click bar to filter</div></div>
+        <div class="winrate-card"><div class="winrate-title">Win Rate by Mode</div><div id="wrSystem"></div><div class="winrate-sub">Click bar to filter</div></div>
+        <div class="winrate-card"><div class="winrate-title">Win Rate by Session</div><div id="wrSession"></div><div class="winrate-sub">Click bar to filter</div></div>
+        <div class="winrate-card"><div class="winrate-title">Win Rate by Setup</div><div id="wrSetup"></div><div class="winrate-sub">Click bar to filter</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: LOG TRADE / SETTINGS -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('log')">Log a Trade</button>
+        <button class="modal-tab" onclick="switchTab('settings')">Account Settings</button>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="log-section show" id="logSection">
+
+        <!-- Portfolio selector -->
+        <div class="port-select-row">
+          <label>📂 Portfolio</label>
+          <select id="fPortfolio"></select>
+        </div>
+
+        <!-- Entry / Exit -->
+        <div class="form-row cols2">
+          <div class="field">
+            <label>Entry Date &amp; Time</label>
+            <div class="dt-wrap">
+              <input type="datetime-local" id="fEntryTime" step="1" lang="en-GB">
+              <span class="dt-icon" onclick="try{document.getElementById('fEntryTime').showPicker()}catch(e){document.getElementById('fEntryTime').click()}">🕐</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Exit Date &amp; Time</label>
+            <div class="dt-wrap">
+              <input type="datetime-local" id="fExitTime" step="1" lang="en-GB">
+              <span class="dt-icon" onclick="try{document.getElementById('fExitTime').showPicker()}catch(e){document.getElementById('fExitTime').click()}">🕐</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Asset / Result -->
+        <div class="form-row cols2">
+          <div class="field">
+            <label>Asset</label>
+            <select id="fAsset">
+              <option>GC1</option><option>MGC1</option><option>NQ1</option><option>MNQ1</option><option>XAUUSD</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Result</label>
+            <select id="fResult">
+              <option value="TP">TP (Win)</option>
+              <option value="SL">SL (Loss)</option>
+              <option value="BE">BE (Break Even)</option>
+              <option value="Open">Open</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Price Box -->
+        <div class="price-box">
+          <div class="price-box-title">📌 Price</div>
+          <div class="form-row cols3" style="margin-bottom:0;">
+            <div class="field"><label>Entry Price</label><input type="number" id="fPriceEntry" placeholder="2650.00" step="0.01" oninput="calcDirection();calcPnl();"></div>
+            <div class="field"><label>Target (TP)</label><input type="number" id="fPriceTarget" placeholder="2670.00" step="0.01" oninput="calcDirection();calcPnl();"></div>
+            <div class="field"><label>Stop Loss (SL)</label><input type="number" id="fPriceSL" placeholder="2640.00" step="0.01" oninput="calcDirection();calcPnl();"></div>
+          </div>
+        </div>
+
+        <!-- Direction -->
+        <div class="direction-display">
+          <span class="dir-label">Direction (Auto)</span>
+          <span class="dir-value" id="dirValue">—</span>
+        </div>
+        <input type="hidden" id="fDirection" value="">
+
+        <!-- Mode / Model / TF / HTF -->
+        <div class="form-row cols4">
+          <div class="field"><label>Mode</label>
+            <select id="fSystem">
+              <option>BOSe</option><option>CHe</option><option>BOSe&gt;CHe</option>
+              <option>BOSe&gt;BOSe</option><option>CHe&gt;BOSe</option><option>CHe&gt;CHe</option>
+            </select>
+          </div>
+          <div class="field"><label>Model</label>
+            <select id="fModel"><option>RBR</option><option>RBD</option><option>DBD</option><option>DBR</option></select>
+          </div>
+          <div class="field"><label>Timeframe</label>
+            <select id="fTimeframe"><option>5s</option><option>10s</option><option>15s</option><option>30s</option></select>
+          </div>
+          <div class="field"><label>HTF</label>
+            <select id="fHTF"><option>1m</option><option>3m</option><option>5m</option><option>15m</option></select>
+          </div>
+        </div>
+
+        <!-- Setup / Session -->
+        <div class="form-row cols2">
+          <div class="field"><label>Setup</label>
+            <select id="fSetup"><option>A+</option><option>A</option><option>B</option><option>C</option><option>Other</option></select>
+          </div>
+          <div class="field"><label>Session</label>
+            <select id="fSession"><option>New York</option><option>London</option><option>Asia</option><option>Sydney</option></select>
+          </div>
+        </div>
+
+        <!-- Commission -->
+        <div class="comm-box">
+          <div class="comm-box-title">💰 Commission</div>
+          <div class="form-row cols2" style="margin-bottom:6px;">
+            <div class="field">
+              <label>จำนวน Contracts</label>
+              <input type="number" id="fContracts" placeholder="1" min="1" step="1" value="1" oninput="calcCommission()">
+            </div>
+            <div class="field">
+              <label>Commission <span class="auto-badge">Auto</span></label>
+              <input type="number" id="fCommission" placeholder="0.00" step="0.01" readonly style="opacity:0.65;cursor:default;">
+            </div>
+          </div>
+          <div class="comm-display" id="commDisplay"></div>
+        </div>
+
+        <!-- Risk / RRR / PnL -->
+        <div class="form-row cols3">
+          <div class="field"><label>Risk Amount ($)</label><input type="number" id="fRisk" placeholder="100" min="0" step="0.01"></div>
+          <div class="field"><label>Reward Ratio <span class="auto-badge">Auto</span></label><input type="number" id="fRRR" placeholder="2.00" step="0.01" readonly style="opacity:0.65;cursor:default;"></div>
+          <div class="field"><label>Net PnL ($) <span class="auto-badge">Auto</span></label><input type="number" id="fPnl" placeholder="200" step="0.01" readonly style="opacity:0.65;cursor:default;"></div>
+        </div>
+
+        <div class="field" style="margin-bottom:18px;">
+          <label>Chart Image URL (Optional)</label>
+          <input type="text" id="fChart" placeholder="https://...">
+        </div>
+        <button class="save-btn" id="saveBtn" onclick="saveTrade()">Save Trade</button>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="settings-section" id="settingsSection">
+        <div class="config-banner">
+          <strong>🔗 เชื่อมต่อ Google Sheets ผ่าน Apps Script</strong><br>
+          1. สร้าง Google Sheet → <strong>Extensions → Apps Script</strong><br>
+          2. วางโค้ดจาก <code>google-apps-script.gs</code> → Deploy เป็น Web App<br>
+          3. Copy URL มาวางด้านล่าง<br>
+          <em style="color:var(--green);font-size:11px;">💡 แต่ละพอร์ตจะถูกบันทึกแยก Sheet อัตโนมัติตามชื่อพอร์ต</em>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Google Apps Script Web App URL</label>
+          <input type="text" id="sScriptUrl" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+        </div>
+        <button class="save-btn" onclick="saveSettings()">Save Settings &amp; Reload Data</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PORTFOLIO MANAGER -->
+<div class="modal-overlay" id="pmOverlay" onclick="if(event.target===this)closePm()">
+  <div class="modal" style="width:500px;">
+    <div class="modal-header">
+      <span style="font-size:14px;font-weight:700;">📂 จัดการพอร์ต</span>
+      <button class="modal-close" onclick="closePm()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="pmEditPanel" style="display:none;"></div>
+      <div class="pm-list" id="pmList"></div>
+      <div class="pm-add-area">
+        <div class="pm-add-title">เพิ่มพอร์ตใหม่</div>
+        <div class="color-picker-row" id="colorPicker"></div>
+        <div class="pm-form-row">
+          <input type="text" id="pmNewName" placeholder="ชื่อพอร์ต เช่น Apex, FTMO, Personal..." maxlength="30">
+          <input type="number" id="pmNewBalance" placeholder="Balance ($)" min="0" step="1">
+          <button class="pm-add-btn" onclick="addPortfolio()">+ เพิ่ม</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg">✅ Saved!</span></div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let SCRIPT_URL   = localStorage.getItem('scriptUrl') || '';
+let portfolios   = JSON.parse(localStorage.getItem('portfolios') || '[]');
+let allTrades    = JSON.parse(localStorage.getItem('demoTrades') || '{}');
+let activePortId = localStorage.getItem('activePortId') || '';
+let equityChart  = null;
+let monthlyChart = null;
+
+const PALETTE = ['#58a6ff','#3fb950','#f85149','#ffa657','#bc8cff','#39d0d8','#ffd166','#ff7b72','#79c0ff','#d2a8ff'];
+let pmColor = PALETTE[0];
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('sScriptUrl').value = SCRIPT_URL;
+  buildColorPicker();
+  initCharts();
+  renderTabs();
+  setNowDT();
+
+  document.getElementById('fResult').addEventListener('change', calcPnl);
+  document.getElementById('fRisk').addEventListener('input', calcPnl);
+  document.getElementById('fAsset').addEventListener('change', calcCommission);
+  document.getElementById('fResult').addEventListener('change', calcCommission);
+  calcCommission();
+
+  if (portfolios.length === 0) {
+    showEmpty();
+  } else {
+    if (!activePortId || !portfolios.find(p => p.id === activePortId)) {
+      activePortId = portfolios[0].id;
+    }
+    loadPort(activePortId);
+  }
+});
+
+// ═══════════════════════════════════════
+// PORTFOLIO CRUD
+// ═══════════════════════════════════════
+function savePorts() {
+  localStorage.setItem('portfolios', JSON.stringify(portfolios));
+  localStorage.setItem('activePortId', activePortId);
+}
+
+function addPortfolio() {
+  const name = document.getElementById('pmNewName').value.trim();
+  const bal  = parseFloat(document.getElementById('pmNewBalance').value) || 10000;
+  if (!name) { toast('⚠️ กรุณาใส่ชื่อพอร์ต', 'error'); return; }
+  if (portfolios.find(p => p.name === name)) { toast('⚠️ ชื่อพอร์ตซ้ำ', 'error'); return; }
+  const id = 'p' + Date.now();
+  portfolios.push({ id, name, color: pmColor, initBalance: bal });
+  savePorts();
+  renderTabs(); renderPmList();
+  document.getElementById('pmNewName').value = '';
+  document.getElementById('pmNewBalance').value = '';
+  toast('✅ สร้างพอร์ต "' + name + '" แล้ว', 'success');
+}
+
+function deletePortfolio(id) {
+  const p = portfolios.find(x => x.id === id);
+  if (!confirm('ลบพอร์ต "' + p.name + '"?\n(Demo: ข้อมูลใน LocalStorage จะหาย — Google Sheets ไม่ได้รับผล)')) return;
+  portfolios = portfolios.filter(x => x.id !== id);
+  delete allTrades[id];
+  localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+  if (activePortId === id) activePortId = portfolios[0]?.id || '';
+  savePorts(); renderTabs(); renderPmList();
+  portfolios.length === 0 ? showEmpty() : loadPort(activePortId);
+  toast('🗑 ลบพอร์ตแล้ว', 'success');
+}
+
+let editPortId = null;
+let editColor  = null;
+
+function openEditPort(id) {
+  const p = portfolios.find(x => x.id === id);
+  if (!p) return;
+  editPortId = id;
+  editColor  = p.color;
+  const panel = document.getElementById('pmEditPanel');
+  const colorDots = PALETTE.map((c,i) =>
+    `<div class="cp-dot${c===p.color?' sel':''}" style="background:${c}" onclick="selectEditColor('${c}',this)" title="${c}"></div>`
+  ).join('');
+  panel.innerHTML = `
+    <div class="pm-edit-panel">
+      <div class="pm-edit-title">✏️ แก้ไขพอร์ต: ${p.name}</div>
+      <div class="pm-edit-grid">
+        <input type="text" id="editPortName" value="${p.name}" maxlength="30" placeholder="ชื่อพอร์ต">
+        <input type="number" id="editPortBalance" value="${p.initBalance}" min="0" step="1" placeholder="Balance ($)">
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;">เลือกสี</div>
+        <div class="color-picker-row" id="editColorPicker">${colorDots}</div>
+      </div>
+      <div class="pm-edit-actions">
+        <button class="pm-edit-save" onclick="saveEditPort()">✅ บันทึก</button>
+        <button class="pm-edit-cancel" onclick="cancelEditPort()">ยกเลิก</button>
+      </div>
+    </div>`;
+  panel.style.display = 'block';
+  document.getElementById('editPortName').focus();
+}
+
+function selectEditColor(c, el) {
+  editColor = c;
+  document.querySelectorAll('#editColorPicker .cp-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+async function saveEditPort() {
+  const name = document.getElementById('editPortName').value.trim();
+  const bal  = parseFloat(document.getElementById('editPortBalance').value) || 0;
+  if (!name) { toast('⚠️ กรุณาใส่ชื่อพอร์ต', 'error'); return; }
+  const dup = portfolios.find(p => p.name === name && p.id !== editPortId);
+  if (dup) { toast('⚠️ ชื่อพอร์ตซ้ำ', 'error'); return; }
+  const p = portfolios.find(x => x.id === editPortId);
+  if (!p) return;
+
+  const oldName = p.name;
+  const nameChanged = (oldName !== name);
+
+  // ถ้าชื่อเปลี่ยนและมี Google Sheets → เรียก renameSheet API
+  if (nameChanged && SCRIPT_URL) {
+    const saveBtn = document.querySelector('.pm-edit-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'กำลัง Rename Sheet...'; }
+    try {
+      const res  = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'renameSheet', oldName, newName: name })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Rename ไม่สำเร็จ');
+    } catch(e) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ บันทึก'; }
+      toast('❌ Rename Sheet ไม่ได้: ' + e.message, 'error');
+      return; // หยุด — ไม่บันทึกชื่อใหม่ถ้า Sheet rename ไม่สำเร็จ
+    }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '✅ บันทึก'; }
+  }
+
+  p.name = name;
+  p.initBalance = bal;
+  p.color = editColor;
+  savePorts(); renderTabs(); renderPmList();
+  if (activePortId === editPortId) {
+    document.getElementById('portNameLabel').textContent = name;
+    document.getElementById('portColorDot').style.background = editColor;
+    renderDash(editPortId);
+  }
+  cancelEditPort();
+  const sheetMsg = nameChanged && SCRIPT_URL ? ' (Google Sheet renamed ✓)' : '';
+  toast('✅ อัปเดตพอร์ต "' + name + '" แล้ว' + sheetMsg, 'success');
+}
+
+function cancelEditPort() {
+  editPortId = null; editColor = null;
+  const panel = document.getElementById('pmEditPanel');
+  panel.innerHTML = ''; panel.style.display = 'none';
+}
+
+function switchPort(id) {
+  activePortId = id;
+  localStorage.setItem('activePortId', id);
+  renderTabs();
+  loadPort(id);
+}
+
+// ═══════════════════════════════════════
+// RENDER TABS
+// ═══════════════════════════════════════
+function renderTabs() {
+  const bar = document.getElementById('portBar');
+  bar.innerHTML = '';
+
+  portfolios.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'port-tab' + (p.id === activePortId ? ' active' : '');
+    btn.style.color = p.id === activePortId ? p.color : '';
+    btn.innerHTML = `<span class="tab-dot" style="background:${p.color};${p.id===activePortId?'box-shadow:0 0 5px '+p.color:''}"></span>${p.name}`;
+    btn.onclick = () => switchPort(p.id);
+    bar.appendChild(btn);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'port-tab-add';
+  addBtn.title = 'เพิ่มพอร์ตใหม่';
+  addBtn.textContent = '＋';
+  addBtn.onclick = openPm;
+  bar.appendChild(addBtn);
+
+  // Sync portfolio dropdown in form
+  const sel = document.getElementById('fPortfolio');
+  if (sel) {
+    const prev = sel.value;
+    sel.innerHTML = portfolios.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    if (portfolios.find(p => p.id === prev)) sel.value = prev;
+    else if (activePortId) sel.value = activePortId;
+  }
+}
+
+function renderPmList() {
+  document.getElementById('pmList').innerHTML = portfolios.length === 0
+    ? '<div style="font-size:12px;color:var(--muted);text-align:center;padding:16px">ยังไม่มีพอร์ต</div>'
+    : portfolios.map(p => {
+        const cnt = (allTrades[p.id] || []).length;
+        return `<div class="pm-item">
+          <div class="pm-color" style="background:${p.color}"></div>
+          <div class="pm-name">${p.name}</div>
+          <div class="pm-meta">${cnt} trades &nbsp;•&nbsp; $${p.initBalance.toLocaleString('en')}</div>
+          <button class="pm-edit-btn" title="แก้ไข" onclick="openEditPort('${p.id}')">✏️</button>
+          <button class="pm-del" onclick="deletePortfolio('${p.id}')">✕</button>
+        </div>`;
+      }).join('');
+}
+
+function buildColorPicker() {
+  document.getElementById('colorPicker').innerHTML = PALETTE.map((c,i) =>
+    `<div class="cp-dot${i===0?' sel':''}" style="background:${c}" onclick="selectColor('${c}',this)" title="${c}"></div>`
+  ).join('');
+}
+
+function selectColor(c, el) {
+  pmColor = c;
+  document.querySelectorAll('.cp-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ═══════════════════════════════════════
+// LOAD PORT DATA
+// ═══════════════════════════════════════
+async function loadPort(portId) {
+  const port = portfolios.find(p => p.id === portId);
+  if (!port) { showEmpty(); return; }
+
+  showDash();
+  document.getElementById('portNameLabel').textContent = port.name;
+  document.getElementById('portColorDot').style.background = port.color;
+
+  if (SCRIPT_URL) {
+    showLoading('กำลังโหลดพอร์ต "' + port.name + '"...');
+    try {
+      const res  = await fetch(`${SCRIPT_URL}?action=getTrades&sheet=${encodeURIComponent(port.name)}`);
+      const data = await res.json();
+      if (data.success) {
+        allTrades[portId] = data.trades || [];
+        setConn(true);
+      } else throw new Error(data.error);
+    } catch(e) {
+      setConn(false);
+      toast('❌ โหลดไม่ได้: ' + e.message, 'error');
+      if (!allTrades[portId]) allTrades[portId] = genDemo();
+    } finally { hideLoading(); }
+  } else {
+    setConn(false);
+    if (!allTrades[portId]) {
+      allTrades[portId] = genDemo();
+      localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+    }
+  }
+  renderDash(portId);
+}
+
+// ═══════════════════════════════════════
+// SAVE TRADE
+// ═══════════════════════════════════════
+async function saveTrade() {
+  const trade = collectForm();
+  if (!trade) return;
+  const portId = trade.portfolioId;
+  const port   = portfolios.find(p => p.id === portId);
+  if (!port) { toast('⚠️ กรุณาเลือกพอร์ต', 'error'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+  if (!SCRIPT_URL) {
+    trade.id = Date.now();
+    if (!allTrades[portId]) allTrades[portId] = [];
+    allTrades[portId].unshift(trade);
+    localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+    // Switch to saved portfolio tab and refresh
+    activePortId = portId;
+    savePorts(); renderTabs(); renderDash(portId);
+    toast('✅ บันทึกแล้ว (Demo — พอร์ต: ' + port.name + ')', 'success');
+    closeModal(); resetForm();
+    btn.disabled = false; btn.textContent = 'Save Trade';
+    return;
+  }
+
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST', headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({ action:'addTrade', trade, sheet: port.name })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (!allTrades[portId]) allTrades[portId] = [];
+      allTrades[portId].unshift({...trade, id: data.id});
+      activePortId = portId; savePorts(); renderTabs(); renderDash(portId);
+      toast('✅ บันทึกลง Sheet "' + port.name + '" แล้ว!', 'success');
+      closeModal(); resetForm();
+    } else throw new Error(data.error);
+  } catch(e) {
+    toast('❌ บันทึกไม่ได้: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Trade';
+  }
+}
+
+function collectForm() {
+  const portId    = document.getElementById('fPortfolio').value;
+  const entryTime = document.getElementById('fEntryTime').value;
+  const risk      = parseFloat(document.getElementById('fRisk').value) || 0;
+  const result    = document.getElementById('fResult').value;
+  const direction = document.getElementById('fDirection').value;
+
+  if (!portId)    { toast('⚠️ กรุณาเลือกพอร์ต', 'error'); return null; }
+  if (!entryTime) { toast('⚠️ กรุณาใส่เวลา Entry', 'error'); return null; }
+  if (risk <= 0)  { toast('⚠️ กรุณาใส่ Risk Amount', 'error'); return null; }
+
+  const rrr = parseFloat(document.getElementById('fRRR').value) || 0;
+  let pnl = parseFloat(document.getElementById('fPnl').value);
+  if (isNaN(pnl)) pnl = result==='TP' ? risk*rrr : result==='SL' ? -risk : 0;
+
+  return {
+    portfolioId: portId,
+    entryTime,
+    exitTime:    document.getElementById('fExitTime').value || entryTime,
+    asset:       document.getElementById('fAsset').value,
+    direction:   direction || '—',
+    result,
+    system:      document.getElementById('fSystem').value,
+    model:       document.getElementById('fModel').value,
+    timeframe:   document.getElementById('fTimeframe').value,
+    htf:         document.getElementById('fHTF').value,
+    setup:       document.getElementById('fSetup').value,
+    session:     document.getElementById('fSession').value,
+    priceEntry:  parseFloat(document.getElementById('fPriceEntry').value)||0,
+    priceTarget: parseFloat(document.getElementById('fPriceTarget').value)||0,
+    priceSL:     parseFloat(document.getElementById('fPriceSL').value)||0,
+    risk, rrr, pnl,
+    contracts:  parseInt(document.getElementById('fContracts').value) || 1,
+    commission: parseFloat(document.getElementById('fCommission').value) || 0,
+    chartUrl: document.getElementById('fChart').value
+  };
+}
+
+// ═══════════════════════════════════════
+// COMMISSION
+// ═══════════════════════════════════════
+const COMM_RATE = { 'GC1': 3.24, 'MGC1': 1.24, 'NQ1': 2.80, 'MNQ1': 0.74 };
+
+function calcCommission() {
+  const asset     = document.getElementById('fAsset').value;
+  const contracts = parseInt(document.getElementById('fContracts').value) || 0;
+  const rate      = COMM_RATE[asset];
+  const commEl    = document.getElementById('fCommission');
+  const dispEl    = document.getElementById('commDisplay');
+  if (!rate || contracts <= 0) {
+    if (commEl) commEl.value = '';
+    if (dispEl) dispEl.textContent = asset === 'XAUUSD' ? '⚠️ XAUUSD ไม่มีค่า Commission ในระบบ' : '';
+    return;
+  }
+  const total = rate * contracts;
+  if (commEl) commEl.value = total.toFixed(2);
+  if (dispEl) dispEl.textContent = `${asset}: $${rate}/contract × ${contracts} = $${total.toFixed(2)}`;
+  calcPnlWithComm();
+}
+
+function calcPnlWithComm() {
+  // adjust fPnl to subtract commission if result is not Open
+  const result = document.getElementById('fResult').value;
+  const risk   = parseFloat(document.getElementById('fRisk').value) || 0;
+  const rrr    = parseFloat(document.getElementById('fRRR').value) || 0;
+  const comm   = parseFloat(document.getElementById('fCommission').value) || 0;
+  if (result === 'Open') return;
+  const gross = result==='TP' ? risk*rrr : result==='SL' ? -risk : 0;
+  document.getElementById('fPnl').value = (gross - comm).toFixed(2);
+}
+
+// ═══════════════════════════════════════
+// CALC
+// ═══════════════════════════════════════
+function calcDirection() {
+  const entry  = parseFloat(document.getElementById('fPriceEntry').value);
+  const target = parseFloat(document.getElementById('fPriceTarget').value);
+  const sl     = parseFloat(document.getElementById('fPriceSL').value);
+  const el     = document.getElementById('dirValue');
+  const hidden = document.getElementById('fDirection');
+  if (!entry || (!target && !sl)) { el.textContent='—'; el.className='dir-value'; hidden.value=''; return; }
+  const dir = target ? (target > entry ? 'Buy' : 'Sell') : (sl < entry ? 'Buy' : 'Sell');
+  hidden.value = dir;
+  el.textContent = dir;
+  el.className = 'dir-value ' + (dir==='Buy'?'buy':'sell');
+}
+
+function calcPnl() {
+  const entry  = parseFloat(document.getElementById('fPriceEntry').value);
+  const target = parseFloat(document.getElementById('fPriceTarget').value);
+  const sl     = parseFloat(document.getElementById('fPriceSL').value);
+  const risk   = parseFloat(document.getElementById('fRisk').value)||0;
+  const result = document.getElementById('fResult').value;
+  const comm   = parseFloat(document.getElementById('fCommission').value) || 0;
+  if (entry && target && sl && sl !== entry) {
+    const rrr = Math.abs(target-entry)/Math.abs(entry-sl);
+    document.getElementById('fRRR').value = rrr.toFixed(2);
+    if (risk > 0) {
+      const gross = result==='TP'?risk*rrr:result==='SL'?-risk:0;
+      document.getElementById('fPnl').value = (gross - comm).toFixed(2);
+    }
+  } else if (risk > 0) {
+    const rrr = parseFloat(document.getElementById('fRRR').value)||0;
+    const gross = result==='TP'?risk*rrr:result==='SL'?-risk:0;
+    document.getElementById('fPnl').value = (gross - comm).toFixed(2);
+  }
+}
+
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+function saveSettings() {
+  SCRIPT_URL = document.getElementById('sScriptUrl').value.trim();
+  localStorage.setItem('scriptUrl', SCRIPT_URL);
+  toast('✅ บันทึก Settings แล้ว', 'success');
+  closeModal();
+  if (activePortId) loadPort(activePortId);
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD RENDER
+// ═══════════════════════════════════════
+function renderDash(portId) {
+  const port   = portfolios.find(p => p.id === portId);
+  if (!port) return;
+  const trades = allTrades[portId] || [];
+  const INIT   = port.initBalance;
+  const closed = trades.filter(t => t.result !== 'Open');
+  const wins   = closed.filter(t => t.result === 'TP');
+  const losses = closed.filter(t => t.result === 'SL');
+  const pnlSum = closed.reduce((s,t) => s+(parseFloat(t.pnl)||0), 0);
+  const wr     = closed.length ? wins.length/closed.length*100 : 0;
+  const bal    = INIT + pnlSum;
+  const ret    = INIT ? pnlSum/INIT*100 : 0;
+  const gp     = wins.reduce((s,t) => s+(parseFloat(t.pnl)||0), 0);
+  const gl     = Math.abs(losses.reduce((s,t) => s+(parseFloat(t.pnl)||0), 0));
+  const pf     = gl ? gp/gl : gp>0 ? 999 : 0;
+  const exp    = closed.length ? pnlSum/closed.length : 0;
+  const avgR   = closed.length ? closed.reduce((s,t)=>s+(parseFloat(t.rrr)||0),0)/closed.length : 0;
+
+  let hold = 0;
+  const wt = closed.filter(t=>t.entryTime&&t.exitTime);
+  if (wt.length) hold = wt.reduce((s,t)=>s+Math.max(0,(new Date(t.exitTime)-new Date(t.entryTime))/3600000),0)/wt.length;
+
+  let peak=INIT,maxDD=0,run=INIT;
+  [...trades].reverse().forEach(t=>{run+=parseFloat(t.pnl)||0;if(run>peak)peak=run;const d=peak>0?(peak-run)/peak*100:0;if(d>maxDD)maxDD=d;});
+
+  const S = (id, v) => document.getElementById(id).textContent = v;
+  const C = (id, c) => document.getElementById(id).className = 'stat-value '+c;
+
+  S('statBalance', '$'+bal.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2}));
+  S('statBalanceSub', 'Initial: $'+INIT.toLocaleString('en'));
+  S('statPnl', (pnlSum>=0?'+':'')+'$'+pnlSum.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2}));
+  C('statPnl', pnlSum>=0?'green':'red');
+  S('statPnlSub', (ret>=0?'+':'')+ret.toFixed(2)+'% Return');
+  S('statWinRate', wr.toFixed(1)+'%');
+  S('statWinSub', closed.length+' Total Trades');
+  S('statDrawdown', '-'+maxDD.toFixed(2)+'%');
+  S('statPF', pf===999?'∞':pf.toFixed(2));
+  S('statExpect', '$'+exp.toFixed(2));
+  S('statRRR', '1 : '+avgR.toFixed(2));
+  S('statHold', hold.toFixed(1)+' Hrs');
+
+  updateEquityChart(closed, INIT);
+  updateMonthlyChart(closed);
+  updateWinRateBars(closed);
+}
+
+// ═══════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════
+function initCharts() {
+  const cd = {
+    color:'#7d8590',
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1}},
+    scales:{x:{grid:{color:'#21262d'},ticks:{color:'#7d8590',font:{size:10}}},y:{grid:{color:'#21262d'},ticks:{color:'#7d8590',font:{size:10}}}}
+  };
+  equityChart = new Chart(document.getElementById('equityChart'),{
+    type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#58a6ff',borderWidth:2,fill:true,
+      backgroundColor:ctx=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,210);g.addColorStop(0,'rgba(88,166,255,0.18)');g.addColorStop(1,'rgba(88,166,255,0)');return g;},
+      tension:0.4,pointRadius:2,pointHoverRadius:4}]},
+    options:{...cd,responsive:true,maintainAspectRatio:false,
+      scales:{...cd.scales,y:{...cd.scales.y,ticks:{...cd.scales.y.ticks,callback:v=>'$'+v.toLocaleString('en')}}}}
+  });
+  monthlyChart = new Chart(document.getElementById('monthlyChart'),{
+    type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:4}]},
+    options:{...cd,responsive:true,maintainAspectRatio:false,
+      scales:{...cd.scales,y:{...cd.scales.y,ticks:{...cd.scales.y.ticks,callback:v=>'$'+v.toLocaleString('en')}}}}
+  });
+}
+
+function updateEquityChart(closed,INIT){
+  const s=[...closed].sort((a,b)=>new Date(a.entryTime)-new Date(b.entryTime));
+  let b=INIT;const L=['Start'],D=[b];
+  s.forEach((t,i)=>{b+=parseFloat(t.pnl)||0;L.push(i+1);D.push(parseFloat(b.toFixed(2)));});
+  equityChart.data.labels=L;equityChart.data.datasets[0].data=D;equityChart.update();
+}
+function updateMonthlyChart(closed){
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mm={};
+  closed.forEach(t=>{const d=new Date(t.entryTime);const k=mn[d.getMonth()]+' '+d.getFullYear();mm[k]=(mm[k]||0)+(parseFloat(t.pnl)||0);});
+  const L=Object.keys(mm),D=Object.values(mm);
+  monthlyChart.data.labels=L;monthlyChart.data.datasets[0].data=D;
+  monthlyChart.data.datasets[0].backgroundColor=D.map(v=>v>=0?'rgba(63,185,80,0.8)':'rgba(248,81,73,0.8)');monthlyChart.update();
+}
+function updateWinRateBars(closed){
+  [{id:'wrAsset',key:'asset',c:['#bc8cff','#a075e6','#7b52d4','#5c3dba','#4a2fa0']},
+   {id:'wrSystem',key:'system',c:['#39d0d8','#2eb8bf','#22a0a7','#17888f','#0d7077']},
+   {id:'wrSession',key:'session',c:['#ffa657','#e08f40','#c07830','#a06120','#804a10']},
+   {id:'wrSetup',key:'setup',c:['#f85149','#db413a','#c0312b','#a4221c','#88130d']}
+  ].forEach(g=>{
+    const m={};
+    closed.forEach(t=>{const k=t[g.key]||'?';if(!m[k])m[k]={w:0,n:0};m[k].n++;if(t.result==='TP')m[k].w++;});
+    const s=Object.entries(m).sort((a,b)=>b[1].n-a[1].n).slice(0,5);
+    document.getElementById(g.id).innerHTML=s.map(([lb,v],i)=>{
+      const p=v.n?Math.round(v.w/v.n*100):0;
+      return `<div class="bar-item"><div class="bar-label" title="${lb}">${lb}</div><div class="bar-track"><div class="bar-fill" style="width:${p}%;background:${g.c[i]||g.c[0]}"></div></div><div class="bar-pct">${p}%</div></div>`;
+    }).join('')||'<div style="font-size:11px;color:var(--muted);text-align:center;padding:14px">ยังไม่มีข้อมูล</div>';
+  });
+}
+
+// ═══════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════
+function genDemo(){
+  const A=['GC1','MGC1','NQ1','MNQ1','XAUUSD'],M=['BOSe','CHe','BOSe>CHe','BOSe>BOSe','CHe>BOSe','CHe>CHe'],
+        MD=['RBR','RBD','DBD','DBR'],SE=['New York','London','Asia'],SU=['A+','A','B','C'],
+        TF=['5s','10s','15s'],HT=['1m','3m','5m','15m'],RE=['TP','TP','TP','SL','SL','BE'],n=new Date();
+  return Array.from({length:40},(_,i)=>{
+    const r=RE[~~(Math.random()*RE.length)],risk=[50,100,150,200][~~(Math.random()*4)],rrr=[1,1.5,2,2.5,3][~~(Math.random()*5)];
+    const d=new Date(n-i*3*86400000);
+    return {id:i,entryTime:d.toISOString(),exitTime:new Date(d.getTime()+Math.random()*8*3600000).toISOString(),
+      asset:A[~~(Math.random()*A.length)],direction:Math.random()>.5?'Buy':'Sell',result:r,
+      system:M[~~(Math.random()*M.length)],model:MD[~~(Math.random()*MD.length)],
+      timeframe:TF[~~(Math.random()*TF.length)],htf:HT[~~(Math.random()*HT.length)],
+      setup:SU[~~(Math.random()*SU.length)],session:SE[~~(Math.random()*SE.length)],
+      risk,rrr,pnl:r==='TP'?risk*rrr:r==='SL'?-risk:0};
+  });
+}
+
+// ═══════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════
+function showEmpty() { document.getElementById('noPortMsg').style.display='block'; document.getElementById('dashMain').style.display='none'; }
+function showDash()  { document.getElementById('noPortMsg').style.display='none';  document.getElementById('dashMain').style.display='block'; }
+function setConn(ok) {
+  const dot=document.getElementById('connDot'),txt=document.getElementById('connText');
+  dot.className='conn-dot'+(ok?' connected':SCRIPT_URL?' error':'');
+  txt.textContent=ok?'เชื่อมต่อแล้ว':SCRIPT_URL?'เชื่อมต่อไม่ได้':'Demo Mode';
+}
+function showLoading(m='Loading...'){document.getElementById('loadingText').textContent=m;document.getElementById('loadingOverlay').classList.add('show');}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('show');}
+function toast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.className='toast',3000);}
+function setNowDT(){
+  const n=new Date();
+  const pad=v=>String(v).padStart(2,'0');
+  const localStr=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())+'T'+pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+  ['fEntryTime','fExitTime'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.setAttribute('lang','en-GB'); // en-GB forces 24h in Chromium
+    el.value=localStr;
+  });
+}
+function resetForm(){
+  const ids=['fPriceEntry','fPriceTarget','fPriceSL','fRisk','fRRR','fPnl','fChart','fCommission'];
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const selects=['fAsset','fResult','fSystem','fModel','fTimeframe','fHTF','fSetup','fSession'];
+  selects.forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  const dir=document.getElementById('dirValue');if(dir){dir.textContent='—';dir.className='dir-value';}
+  const hid=document.getElementById('fDirection');if(hid)hid.value='';
+  const ct=document.getElementById('fContracts');if(ct)ct.value='1';
+  const cd=document.getElementById('commDisplay');if(cd)cd.textContent='';
+  setNowDT();
+  calcCommission();
+}
+
+function openModal(){renderTabs();const s=document.getElementById('fPortfolio');if(s&&activePortId)s.value=activePortId;document.getElementById('modalOverlay').classList.add('show');setNowDT();}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+function switchTab(tab){
+  document.querySelectorAll('.modal-tab').forEach((b,i)=>b.classList.toggle('active',(tab==='log'&&i===0)||(tab==='settings'&&i===1)));
+  document.getElementById('logSection').classList.toggle('show',tab==='log');
+  document.getElementById('settingsSection').classList.toggle('show',tab==='settings');
+}
+function openPm(){renderPmList();buildColorPicker();document.getElementById('pmOverlay').classList.add('show');}
+function closePm(){document.getElementById('pmOverlay').classList.remove('show');}
+</script>
+</body>
+</html>

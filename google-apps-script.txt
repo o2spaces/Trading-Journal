@@ -1,0 +1,164 @@
+// ============================================================
+// PRO TRADING DASHBOARD — Google Apps Script Backend
+// รองรับหลายพอร์ต โดยแต่ละพอร์ตจะอยู่ใน Sheet แยกกัน
+//
+// วิธี Deploy:
+//   1. เปิด Google Sheets → Extensions → Apps Script
+//   2. วางโค้ดนี้ทั้งหมด → Save
+//   3. Deploy → New Deployment → Web App
+//      Execute as: Me  |  Access: Anyone
+//   4. Copy URL ไปวางใน Dashboard → Account Settings
+// ============================================================
+
+const HEADERS = [
+  'ID','Entry Time','Exit Time','Asset','Direction','Result',
+  'Mode','Model','Timeframe','HTF','Setup','Session',
+  'Entry Price','Target Price','Stop Loss',
+  'Risk ($)','RRR','Net PnL ($)','Chart URL','Created At'
+];
+
+// ─── GET: ดึง trades ของพอร์ตที่ระบุ ───────────────────────
+function doGet(e) {
+  const action = e.parameter.action;
+  const sheet  = e.parameter.sheet || '';
+  if (action === 'getTrades') return handleGetTrades(sheet);
+  if (action === 'listSheets') return handleListSheets();
+  return respond({ success:false, error:'Unknown action' });
+}
+
+// ─── POST: บันทึก trade / rename sheet ─────────────────────
+function doPost(e) {
+  try {
+    const body   = JSON.parse(e.postData.contents);
+    const action = body.action;
+    if (action === 'addTrade')    return handleAddTrade(body.trade, body.sheet || '');
+    if (action === 'renameSheet') return handleRenameSheet(body.oldName, body.newName);
+    return respond({ success:false, error:'Unknown action' });
+  } catch(err) {
+    return respond({ success:false, error:err.message });
+  }
+}
+
+// ─── ดึง trades ทั้งหมดของ sheet ที่ระบุ ───────────────────
+function handleGetTrades(sheetName) {
+  const sheet = getOrCreateSheet(sheetName);
+  const data  = sheet.getDataRange().getValues();
+  if (data.length <= 1) return respond({ success:true, trades:[] });
+
+  const trades = data.slice(1).map(row => ({
+    id:          row[0],
+    entryTime:   row[1] ? formatDate(row[1]) : '',
+    exitTime:    row[2] ? formatDate(row[2]) : '',
+    asset:       row[3],  direction:   row[4],  result:      row[5],
+    system:      row[6],  model:       row[7],  timeframe:   row[8],
+    htf:         row[9],  setup:       row[10], session:     row[11],
+    priceEntry:  +row[12]||0, priceTarget: +row[13]||0, priceSL: +row[14]||0,
+    risk:        +row[15]||0, rrr:         +row[16]||0, pnl:     +row[17]||0,
+    chartUrl:    row[18], createdAt:   row[19]
+  }));
+  return respond({ success:true, trades });
+}
+
+// ─── รายชื่อ Sheets ทั้งหมด (ไม่รวม Summary) ───────────────
+function handleListSheets() {
+  const sheets = SpreadsheetApp.getActiveSpreadsheet().getSheets()
+    .map(s => s.getName())
+    .filter(n => n !== 'Summary');
+  return respond({ success:true, sheets });
+}
+
+// ─── บันทึก trade ─────────────────────────────────────────
+function handleAddTrade(trade, sheetName) {
+  const sheet = getOrCreateSheet(sheetName);
+  const id    = Utilities.getUuid();
+  const now   = new Date();
+
+  sheet.appendRow([
+    id,
+    trade.entryTime  ? new Date(trade.entryTime)  : now,
+    trade.exitTime   ? new Date(trade.exitTime)   : now,
+    trade.asset||'', trade.direction||'', trade.result||'',
+    trade.system||'', trade.model||'', trade.timeframe||'', trade.htf||'',
+    trade.setup||'', trade.session||'',
+    +trade.priceEntry||0, +trade.priceTarget||0, +trade.priceSL||0,
+    +trade.risk||0, +trade.rrr||0, +trade.pnl||0,
+    trade.chartUrl||'', now
+  ]);
+
+  const lr = sheet.getLastRow();
+  // Format dates
+  sheet.getRange(lr, 2, 1, 2).setNumberFormat('dd/mm/yyyy hh:mm');
+  // Format numbers
+  sheet.getRange(lr, 13, 1, 8).setNumberFormat('#,##0.00');
+
+  // Color result
+  const rc = sheet.getRange(lr, 6);
+  const colors = { TP:['#0d4f1e','#3fb950'], SL:['#4f0d0d','#f85149'], BE:['#3d3d0d','#ffd166'] };
+  if (colors[trade.result]) rc.setBackground(colors[trade.result][0]).setFontColor(colors[trade.result][1]);
+
+  // Color PnL
+  const pnlCell = sheet.getRange(lr, 18);
+  if (+trade.pnl > 0) pnlCell.setFontColor('#3fb950');
+  else if (+trade.pnl < 0) pnlCell.setFontColor('#f85149');
+
+  return respond({ success:true, id });
+}
+
+// ─── Rename Sheet (ไม่สร้างใหม่) ──────────────────────────
+function handleRenameSheet(oldName, newName) {
+  if (!oldName || !newName) return respond({ success:false, error:'ต้องระบุ oldName และ newName' });
+  oldName = oldName.trim();
+  newName = newName.trim();
+  if (oldName === newName) return respond({ success:true }); // ไม่มีอะไรต้องเปลี่ยน
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // ตรวจสอบว่าชื่อใหม่ไม่ซ้ำกับ sheet ที่มีอยู่แล้ว
+  if (ss.getSheetByName(newName)) {
+    return respond({ success:false, error:'ชื่อ Sheet "' + newName + '" มีอยู่แล้ว' });
+  }
+
+  const sheet = ss.getSheetByName(oldName);
+  if (!sheet) {
+    // ถ้าไม่เจอ sheet เดิม (เช่น ยังไม่เคยบันทึก trade) ถือว่าสำเร็จได้เลย
+    return respond({ success:true, note:'Sheet "' + oldName + '" ไม่พบ — ไม่มีอะไรต้อง rename' });
+  }
+
+  sheet.setName(newName);
+  return respond({ success:true });
+}
+
+// ─── สร้าง/ดึง Sheet ตามชื่อพอร์ต ─────────────────────────
+function getOrCreateSheet(name) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // ถ้าไม่มีชื่อ ใช้ชื่อ default
+  const sheetName = (name && name.trim()) ? name.trim() : 'Trades';
+  let sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    // Header row
+    const hdr = sheet.getRange(1, 1, 1, HEADERS.length);
+    hdr.setValues([HEADERS]);
+    hdr.setFontWeight('bold').setBackground('#1c2128').setFontColor('#e6edf3').setFontSize(11);
+    // Column widths
+    [280,140,140,80,75,70,110,75,85,60,70,85,100,100,100,90,65,100,200,140]
+      .forEach((w,i) => sheet.setColumnWidth(i+1, w));
+    sheet.setFrozenRows(1);
+    // Tab color — assign a color based on existing sheet count
+    const colors = ['#1f6feb','#3fb950','#f85149','#ffa657','#bc8cff','#39d0d8'];
+    const idx = ss.getSheets().length % colors.length;
+    sheet.setTabColor(colors[idx]);
+  }
+  return sheet;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return isNaN(dt) ? String(d) : dt.toISOString();
+}
+
+function respond(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
