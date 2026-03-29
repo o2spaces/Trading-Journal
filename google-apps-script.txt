@@ -203,7 +203,15 @@ function handleAddTrade(trade, sheetName) {
   dataRows.forEach(r => { if (parseFloat(r[24]) < 0) sumDDLoss += Math.abs(parseFloat(r[24]) || 0); });
   if (pnl < 0) sumDDLoss += Math.abs(pnl);
 
-  const tradeDate = trade.date ? new Date(trade.date + 'T00:00:00') : now;
+  let tradeDate = now;
+if (trade.date) {
+  const parts = trade.date.split('-');
+  if (parts.length === 3) {
+    tradeDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  } else {
+    tradeDate = new Date(trade.date);
+  }
+}
   sheet.appendRow([
     id,                    // A:  ID
     tradeDate,             // B:  Date
@@ -370,8 +378,13 @@ function getOrCreateSheet(name) {
 // ─── Helpers ─────────────────────────────────────────────────
 function formatDate(d) {
   if (!d) return '';
-  const dt = new Date(d);
-  return isNaN(dt) ? String(d) : dt.toISOString().split('T')[0];
+  if (!(d instanceof Date)) {
+    d = new Date(d);
+    if (isNaN(d)) return String(d);
+  }
+  // ✅ ใช้ timezone ของ Spreadsheet แทน UTC
+  const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  return Utilities.formatDate(d, tz, 'yyyy-MM-dd');
 }
 
 function respond(data) {
