@@ -486,6 +486,44 @@ input[readonly]{opacity:0.6;cursor:default !important;}
 .ts-rule-bar{height:4px;background:var(--border2);border-radius:2px;overflow:hidden;margin-top:8px;}
 .ts-rule-bar-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
 
+
+/* ── DATE / TIME INPUT WITH ICON ── */
+.input-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-icon-wrap input {
+  width: 100%;
+  padding-right: 36px !important;
+}
+.input-icon-wrap .input-icon-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: none; /* clicks pass through to input */
+  user-select: none;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.input-icon-wrap:hover .input-icon-btn { opacity: 1; }
+
+/* Force the native picker icon invisible so our emoji shows instead */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 36px;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
 </style>
 </head>
 <body>
@@ -927,7 +965,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
         <!-- ROW 1: Day(week) / Session / Date / Time Slot -->
         <div class="form-row cols4">
           <div class="field">
-            <label>Day</label>
+            <label>📅 Day</label>
             <select id="fDay">
               <option value="Mon" selected >Mon</option>
               <option value="Tue">Tue</option>
@@ -937,7 +975,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Session</label>
+            <label>🌐 Session</label>
             <select id="fSession">
               <option value="AS" selected >AS (Asia)</option>
               <option value="LO">LO (London)</option>
@@ -946,11 +984,11 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Date</label>
-            <input type="date" id="fDate">
+            <label>📆 Date</label>
+            <div class="input-icon-wrap"><input type="date" id="fDate"><span class="input-icon-btn">📅</span></div>
           </div>
           <div class="field">
-            <label>Time Slot</label>
+            <label>🕐 Time Slot</label>
             <select id="fTimeSlot">
               <option value="05:00-07:00">05:00-07:00</option>
               <option value="07:00-09:00">07:00-09:00</option>
@@ -966,10 +1004,10 @@ input[readonly]{opacity:0.6;cursor:default !important;}
           </div>
         </div>
 
-        <!-- ROW 2: Duration / Time Entry / Code / Class / Asset -->
-        <div class="form-row cols5">
+        <!-- ROW 2: Asset / Duration / Time Entry / Time Exited / Code / Class -->
+        <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
           <div class="field">
-            <label>Asset</label>
+            <label>📊 Asset</label>
             <select id="fAsset" onchange="calcAuto()">
               <option value="MNQ1" selected >MNQ1</option>
               <option value="MGC1">MGC1</option>
@@ -979,15 +1017,19 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Duration (นาที)</label>
+            <label>⏱️ Duration (นาที)</label>
             <input type="number" id="fDuration" placeholder="เช่น 15" min="1" step="1">
           </div>
           <div class="field">
-            <label>Time Entry</label>
-            <input type="time" id="fTimeEntry">
+            <label>🟢 Time Entry</label>
+            <div class="input-icon-wrap"><input type="time" id="fTimeEntry"><span class="input-icon-btn">🕐</span></div>
           </div>
           <div class="field">
-            <label>Code</label>
+            <label>🔴 Time Exited</label>
+            <div class="input-icon-wrap"><input type="time" id="fTimeExited"><span class="input-icon-btn">🕑</span></div>
+          </div>
+          <div class="field">
+            <label>🔖 Code</label>
             <select id="fCode">
               <option value="Code1">Code1</option>
               <option value="Code2">Code2</option>
@@ -995,7 +1037,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Class</label>
+            <label>🏅 Class</label>
             <select id="fClass">
               <option value="A+">A+</option>
               <option value="A">A</option>
@@ -1007,7 +1049,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
         <!-- ROW 3: Mode / Model / Mitigated Zone -->
         <div class="form-row cols3">
           <div class="field">
-            <label>Mode</label>
+            <label>⚙️ Mode</label>
             <select id="fMode">
               <option value="Be">Be</option>
               <option value="CHe">CHe</option>
@@ -1020,7 +1062,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Model</label>
+            <label>🧱 Model</label>
             <select id="fModel">
               <option value="RBR">RBR</option>
               <option value="RBD">RBD</option>
@@ -1031,7 +1073,7 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             </select>
           </div>
           <div class="field">
-            <label>Mitigated Zone</label>
+            <label>🗺️ Mitigated Zone</label>
             <select id="fZone">
               <option value="Bos1">Bos1</option>
               <option value="Bos1 ย้าย">Bos1 ย้าย</option>
@@ -1048,28 +1090,32 @@ input[readonly]{opacity:0.6;cursor:default !important;}
             <span id="assetSpecInfo" style="font-size:10px;font-weight:600;color:var(--cyan);letter-spacing:0.3px;"></span>
           </div>
           <div class="form-row cols3" style="margin-bottom:0;">
-            <div class="field"><label>Entry</label><input type="number" id="fEntry" placeholder="2650.00" step="0.01" oninput="calcAuto()"></div>
-            <div class="field"><label>Target</label><input type="number" id="fTarget" placeholder="2670.00" step="0.01" oninput="calcAuto()"></div>
-            <div class="field"><label>Stop Loss</label><input type="number" id="fSL" placeholder="2640.00" step="0.01" oninput="calcAuto()"></div>
+            <div class="field"><label>📍 Entry</label><input type="number" id="fEntry" placeholder="2650.00" step="0.01" oninput="calcAuto()"></div>
+            <div class="field"><label>🎯 Target</label><input type="number" id="fTarget" placeholder="2670.00" step="0.01" oninput="calcAuto()"></div>
+            <div class="field"><label>🛑 Stop Loss</label><input type="number" id="fSL" placeholder="2640.00" step="0.01" oninput="calcAuto()"></div>
           </div>
         </div>
 
         <!-- ROW: Result / Max RR / Picture -->
         <div class="form-row cols3">
           <div class="field">
-            <label>Result</label>
-            <select id="fResult" onchange="calcAuto()">
+            <label>🎯 Result <span style="color:var(--red);font-size:10px;">* จำเป็น</span></label>
+            <select id="fResult" onchange="calcAuto(); checkResult(this);" style="border-color:rgba(255,71,87,0.5);">
+              <option value="" selected>— เลือก Result —</option>
               <option value="TP">TP (Win)</option>
               <option value="Loss">Loss (SL)</option>
               <option value="Miss">Miss</option>
             </select>
+            <div id="resultWarn" style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:10px;font-weight:700;color:var(--red);animation:warnPulse 1.6s ease-in-out infinite;">
+              ⚠️ กรุณาเลือก Result ก่อนบันทึก!
+            </div>
           </div>
           <div class="field">
-            <label>Max RR</label>
+            <label>📐 Max RR</label>
             <input type="number" id="fMaxRR" placeholder="3.0" step="0.1" min="0">
           </div>
           <div class="field">
-            <label>Picture URL</label>
+            <label>🖼️ Picture URL</label>
             <input type="text" id="fPicture" placeholder="https://...">
           </div>
         </div>
@@ -1279,6 +1325,18 @@ function getRiskTarget() {
   return v > 0 ? v : savedRisk;
 }
 
+function checkResult(el) {
+  const warn = document.getElementById('resultWarn');
+  if (el.value) {
+    el.style.borderColor = '';
+    el.style.boxShadow = '';
+    if (warn) warn.style.display = 'none';
+  } else {
+    el.style.borderColor = 'rgba(255,71,87,0.5)';
+    if (warn) warn.style.display = 'flex';
+  }
+}
+
 // ════════════════════════════════════════
 // ASSET SPECS
 // ════════════════════════════════════════
@@ -1417,47 +1475,47 @@ function calcPnlFromRisk() {
 // ════════════════════════════════════════
 // SAVE TRADE
 // ════════════════════════════════════════
-async function saveTrade() {
+function saveTrade() {
   const trade = collectForm();
   if (!trade) return;
   const portId = trade.portfolioId;
   const port   = portfolios.find(p => p.id === portId);
   if (!port) { toast('⚠️ กรุณาเลือกพอร์ต', 'error'); return; }
 
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  // ── บันทึกใน Local ทันที ──
+  trade.id = Date.now();
+  if (!allTrades[portId]) allTrades[portId] = [];
+  allTrades[portId].unshift(trade);
+  localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+  activePortId = portId;
+  savePorts(); renderTabs(); renderDash(portId);
+  closeModal(); resetForm();
 
   if (!SCRIPT_URL) {
-    trade.id = Date.now();
-    if (!allTrades[portId]) allTrades[portId] = [];
-    allTrades[portId].unshift(trade);
-    localStorage.setItem('demoTrades', JSON.stringify(allTrades));
-    activePortId = portId;
-    savePorts(); renderTabs(); renderDash(portId);
     toast('✅ บันทึกแล้ว (Demo)', 'success');
-    closeModal(); resetForm();
-    btn.disabled = false; btn.textContent = '💾 Save Trade';
     return;
   }
 
-  try {
-    const res  = await fetch(SCRIPT_URL, {
-      method:'POST', headers:{'Content-Type':'text/plain'},
-      body: JSON.stringify({ action:'addTrade', trade, sheet: port.name })
-    });
-    const data = await res.json();
+  // ── ส่ง Google Sheet ใน background ──
+  toast('✅ บันทึกแล้ว — กำลังซิงค์ Sheet...', 'success');
+  fetch(SCRIPT_URL, {
+    method:'POST', headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({ action:'addTrade', trade, sheet: port.name })
+  })
+  .then(r => r.json())
+  .then(data => {
     if (data.success) {
-      if (!allTrades[portId]) allTrades[portId] = [];
-      allTrades[portId].unshift({...trade, id: data.id});
-      activePortId = portId; savePorts(); renderTabs(); renderDash(portId);
-      toast('✅ บันทึกลง Sheet "' + port.name + '" แล้ว!', 'success');
-      closeModal(); resetForm();
-    } else throw new Error(data.error);
-  } catch(e) {
-    toast('❌ บันทึกไม่ได้: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = '💾 Save Trade';
-  }
+      // อัปเดต id จาก server
+      const idx = allTrades[portId].findIndex(t => t.id === trade.id);
+      if (idx !== -1) { allTrades[portId][idx].id = data.id; localStorage.setItem('demoTrades', JSON.stringify(allTrades)); }
+      toast('☁️ ซิงค์ Sheet "' + port.name + '" เรียบร้อย!', 'success');
+    } else {
+      toast('⚠️ Local OK แต่ Sheet ไม่ได้รับ: ' + data.error, 'error');
+    }
+  })
+  .catch(e => {
+    toast('⚠️ Local OK แต่ซิงค์ไม่ได้: ' + e.message, 'error');
+  });
 }
 
 function collectForm() {
@@ -1468,6 +1526,14 @@ function collectForm() {
 
   if (!portId) { toast('⚠️ กรุณาเลือกพอร์ต', 'error'); return null; }
   if (!date)   { toast('⚠️ กรุณาเลือกวันที่', 'error'); return null; }
+  if (!result) { 
+    toast('⚠️ กรุณาเลือก Result ก่อนบันทึก!', 'error'); 
+    const resultEl = document.getElementById('fResult');
+    resultEl.style.borderColor = 'var(--red)';
+    resultEl.style.boxShadow = '0 0 0 3px rgba(255,71,87,0.25)';
+    resultEl.scrollIntoView({behavior:'smooth', block:'center'});
+    return null; 
+  }
   if (risk <= 0 && result !== 'Miss') { toast('⚠️ กรุณาใส่ Entry / SL เพื่อคำนวณ Risk', 'error'); return null; }
 
   const rr   = parseFloat(document.getElementById('fRR').value) || 0;
@@ -1484,6 +1550,7 @@ function collectForm() {
     timeSlot    : document.getElementById('fTimeSlot').value,
     duration    : parseInt(document.getElementById('fDuration').value) || 0,
     timeEntry   : document.getElementById('fTimeEntry').value,
+    timeExited  : document.getElementById('fTimeExited') ? document.getElementById('fTimeExited').value : '',
     code        : document.getElementById('fCode').value,
     cls         : document.getElementById('fClass').value,
     mode        : document.getElementById('fMode').value,
@@ -2378,13 +2445,18 @@ function setTodayDate() {
 
 function resetForm() {
   ['fEntry','fTarget','fSL','fRisk','fRR','fPnl','fTPPct','fTPDollar','fActualRisk',
-   'fMaxRR','fPicture','fTip','fDuration','fSLPoints','fLot','fDPP'].forEach(id => {
+   'fMaxRR','fPicture','fTip','fDuration','fSLPoints','fLot','fDPP','fTimeExited'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; el.style.color = ''; delete el.dataset.userEdited; }
   });
-  ['fDay','fSession','fTimeSlot','fCode','fClass','fMode','fModel','fZone','fResult','fAsset'].forEach(id=>{
+  ['fDay','fSession','fTimeSlot','fCode','fClass','fMode','fModel','fZone','fAsset'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.selectedIndex=0;
   });
+  // Reset Result to blank + clear warning
+  const resultEl = document.getElementById('fResult');
+  if (resultEl) { resultEl.value = ''; resultEl.style.borderColor = 'rgba(255,71,87,0.5)'; resultEl.style.boxShadow = ''; }
+  const resultWarn = document.getElementById('resultWarn');
+  if (resultWarn) resultWarn.style.display = 'flex';
   const posEl = document.getElementById('fPosition');
   if (posEl) { posEl.value=''; posEl.style.color=''; }
   const warnEl = document.getElementById('riskWarn');
