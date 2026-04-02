@@ -1211,9 +1211,21 @@ input[type="time"]::-webkit-calendar-picker-indicator {
         </div>
 
         <!-- TIP / NOTE -->
-        <div class="field" style="margin-bottom:12px;">
+        <div class="field emoji-field-wrap" style="margin-bottom:12px;">
           <label>💡 Tip / Note</label>
-          <textarea id="fTip" placeholder="บันทึกสิ่งที่เรียนรู้, จุดที่ต้องระวัง..."></textarea>
+          <textarea id="fTip" placeholder="บันทึกสิ่งที่เรียนรู้, จุดที่ต้องระวัง..." style="padding-right:40px;"></textarea>
+          <button class="emoji-trigger-btn" id="emojiTriggerBtn" type="button" onclick="toggleEmojiPanel(event)" title="เลือกอีโมจิ">😊</button>
+          <div class="emoji-panel" id="emojiPanel" onclick="event.stopPropagation()">
+            <div class="emoji-panel-header">ใส่อีโมจิ</div>
+            <div class="emoji-recents" id="emojiRecents">
+              <div class="emoji-recents-label">ล่าสุด</div>
+              <span style="font-size:11px;color:var(--muted);padding:4px 0;" id="emojiRecentEmpty">ยังไม่มีประวัติ</span>
+            </div>
+            <div class="emoji-category-tabs" id="emojiCatTabs"></div>
+            <div class="emoji-grid-wrap">
+              <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+          </div>
         </div>
 
         <button class="save-btn" id="saveBtn" onclick="saveTrade()">💾 Save Trade</button>
