@@ -2306,7 +2306,19 @@ function renderTsOrders() {
         const rr = parseFloat(t.rr)||0;
         const risk = parseFloat(t.risk)||0;
         const date = (t.date||'').split('T')[0];
-        const tip = (t.tip||'').slice(0,30) + ((t.tip||'').length>30?'…':'');
+        const tipFull = t.tip||'';
+        const picUrl  = t.pictureUrl||'';
+        const tipShort = tipFull.slice(0,30) + (tipFull.length>30?'…':'');
+        let noteCell;
+        if (tipFull && picUrl) {
+          noteCell = `<a href="${picUrl}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-size:11px;" title="${tipFull}">${tipShort}</a>`;
+        } else if (tipFull) {
+          noteCell = `<span style="font-size:11px;" title="${tipFull}">${tipShort}</span>`;
+        } else if (picUrl) {
+          noteCell = `<a href="${picUrl}" target="_blank" rel="noopener" style="color:var(--blue);font-size:11px;text-decoration:none;" title="${picUrl}">🖼 ดูรูป</a>`;
+        } else {
+          noteCell = '—';
+        }
         return `<tr>
           <td class="td-num" style="color:var(--muted)">${idx}</td>
           <td class="td-num">${date}</td>
@@ -2321,7 +2333,7 @@ function renderTsOrders() {
           <td style="color:var(--muted2)">${t.code||'—'}</td>
           <td style="color:var(--yellow)">${t.cls||'—'}</td>
           <td style="color:var(--muted)">${t.mode||'—'}</td>
-          <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;" title="${t.tip||''}">${tip||'—'}</td>
+          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${noteCell}</td>
         </tr>`;
       }).join('');
     }
