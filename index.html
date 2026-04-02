@@ -2565,7 +2565,8 @@ async function generateShareLink() {
     });
     const data = await res.json();
     if (data.success && data.id) {
-      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id;
+      const gasEncoded = encodeURIComponent(SCRIPT_URL);
+      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id + '&g=' + gasEncoded;
       showShareUrl(url);
       return;
     }
@@ -2626,12 +2627,14 @@ function copyShareLink() {
 
 // ── Load shared data from URL ──
 async function loadSharedFromHash() {
-  // Short link via GAS: ?s=XXXXXXXX
-  const params = new URLSearchParams(location.search);
+  // Short link via GAS: ?s=XXXXXXXX&g=GAS_URL
+  const params  = new URLSearchParams(location.search);
   const shareId = params.get('s');
-  if (shareId && SCRIPT_URL) {
+  const gasUrl  = params.get('g') ? decodeURIComponent(params.get('g')) : SCRIPT_URL;
+
+  if (shareId && gasUrl) {
     try {
-      const res  = await fetch(`${SCRIPT_URL}?action=getShare&id=${encodeURIComponent(shareId)}`);
+      const res  = await fetch(`${gasUrl}?action=getShare&id=${encodeURIComponent(shareId)}`);
       const data = await res.json();
       if (data.success && data.payload) {
         return applySharedPayload(data.payload);
@@ -2664,6 +2667,7 @@ function applySharedPayload(jsonStr) {
     const shareBtnH = document.getElementById('shareBtnHeader');
     if (shareBtnH) shareBtnH.style.display = 'none';
     document.getElementById('viewOnlyBanner').classList.add('show');
+    renderTabs();
     return true;
   } catch(e) { return false; }
 }
