@@ -1282,6 +1282,16 @@ let pmColor = PALETTE[0];
 // INIT
 // ════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── ซ่อนปุ่ม Edit ทันทีถ้ามี ?s= ใน URL (ก่อน fetch เสร็จ)
+  if (new URLSearchParams(location.search).get('s')) {
+    const a = document.getElementById('addTradeBtn');
+    const b = document.getElementById('shareBtnHeader');
+    if (a) a.style.display = 'none';
+    if (b) b.style.display = 'none';
+    document.getElementById('viewOnlyBanner').classList.add('show');
+    showEmpty(); // ซ่อน content จนกว่าข้อมูลจะโหลดเสร็จ
+  }
+
   document.getElementById('sScriptUrl').value = SCRIPT_URL;
   buildColorPicker();
   initCharts();
@@ -2565,8 +2575,7 @@ async function generateShareLink() {
     });
     const data = await res.json();
     if (data.success && data.id) {
-      const gasEncoded = encodeURIComponent(SCRIPT_URL);
-      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id + '&g=' + gasEncoded;
+      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id;
       showShareUrl(url);
       return;
     }
@@ -2627,14 +2636,12 @@ function copyShareLink() {
 
 // ── Load shared data from URL ──
 async function loadSharedFromHash() {
-  // Short link via GAS: ?s=XXXXXXXX&g=GAS_URL
-  const params  = new URLSearchParams(location.search);
+  // Short link via GAS: ?s=XXXXXXXX
+  const params = new URLSearchParams(location.search);
   const shareId = params.get('s');
-  const gasUrl  = params.get('g') ? decodeURIComponent(params.get('g')) : SCRIPT_URL;
-
-  if (shareId && gasUrl) {
+  if (shareId && SCRIPT_URL) {
     try {
-      const res  = await fetch(`${gasUrl}?action=getShare&id=${encodeURIComponent(shareId)}`);
+      const res  = await fetch(`${SCRIPT_URL}?action=getShare&id=${encodeURIComponent(shareId)}`);
       const data = await res.json();
       if (data.success && data.payload) {
         return applySharedPayload(data.payload);
@@ -2667,7 +2674,6 @@ function applySharedPayload(jsonStr) {
     const shareBtnH = document.getElementById('shareBtnHeader');
     if (shareBtnH) shareBtnH.style.display = 'none';
     document.getElementById('viewOnlyBanner').classList.add('show');
-    renderTabs();
     return true;
   } catch(e) { return false; }
 }
