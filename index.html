@@ -527,6 +527,60 @@ input[readonly]{opacity:0.6;cursor:default !important;}
 }
 .input-icon-wrap:hover .input-icon-btn { opacity: 1; }
 
+/* ── EMOJI PICKER ── */
+.tip-wrap{position:relative;}
+.emoji-toggle-btn{
+  position:absolute;bottom:8px;right:8px;
+  width:28px;height:28px;border-radius:7px;
+  background:var(--card3);border:1px solid var(--border2);
+  font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;z-index:2;line-height:1;
+}
+.emoji-toggle-btn:hover{background:var(--border2);border-color:var(--border3);}
+.emoji-picker-popup{
+  position:absolute;bottom:calc(100% + 6px);right:0;
+  width:320px;background:var(--card2);
+  border:1px solid var(--border2);border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  z-index:999;display:none;flex-direction:column;overflow:hidden;
+  animation:emojiIn 0.15s ease;
+}
+.emoji-picker-popup.open{display:flex;}
+@keyframes emojiIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.emoji-search-row{padding:8px 8px 0;display:flex;gap:6px;align-items:center;}
+.emoji-search-input{
+  flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:7px;
+  padding:5px 9px;color:var(--text);font-size:12px;outline:none;
+  font-family:'Outfit',sans-serif;
+}
+.emoji-search-input:focus{border-color:var(--accent);}
+.emoji-cats{
+  display:flex;gap:0;border-bottom:1px solid var(--border2);padding:4px 6px 0;
+  overflow-x:auto;flex-shrink:0;
+}
+.emoji-cats::-webkit-scrollbar{height:3px;}
+.emoji-cat-btn{
+  padding:5px 7px;font-size:15px;border:none;background:transparent;
+  cursor:pointer;border-bottom:2px solid transparent;border-radius:5px 5px 0 0;
+  transition:all 0.15s;flex-shrink:0;line-height:1;
+}
+.emoji-cat-btn:hover{background:var(--border);}
+.emoji-cat-btn.active{border-bottom-color:var(--blue);}
+.emoji-grid-wrap{height:180px;overflow-y:auto;padding:6px;}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:1px;}
+.emoji-item{
+  font-size:20px;padding:5px;border-radius:6px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 0.1s;line-height:1;
+  border:none;background:transparent;
+}
+.emoji-item:hover{background:var(--border2);}
+.emoji-section-label{
+  font-size:9px;color:var(--muted);font-weight:700;letter-spacing:0.8px;
+  text-transform:uppercase;padding:4px 2px 2px;grid-column:1/-1;
+}
+.emoji-empty{font-size:12px;color:var(--muted);text-align:center;padding:30px 0;grid-column:1/-1;}
+
 /* Force the native picker icon invisible so our emoji shows instead */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
@@ -1211,19 +1265,19 @@ input[type="time"]::-webkit-calendar-picker-indicator {
         </div>
 
         <!-- TIP / NOTE -->
-        <div class="field emoji-field-wrap" style="margin-bottom:12px;">
+        <div class="field" style="margin-bottom:12px;">
           <label>💡 Tip / Note</label>
-          <textarea id="fTip" placeholder="บันทึกสิ่งที่เรียนรู้, จุดที่ต้องระวัง..." style="padding-right:40px;"></textarea>
-          <button class="emoji-trigger-btn" id="emojiTriggerBtn" type="button" onclick="toggleEmojiPanel(event)" title="เลือกอีโมจิ">😊</button>
-          <div class="emoji-panel" id="emojiPanel" onclick="event.stopPropagation()">
-            <div class="emoji-panel-header">ใส่อีโมจิ</div>
-            <div class="emoji-recents" id="emojiRecents">
-              <div class="emoji-recents-label">ล่าสุด</div>
-              <span style="font-size:11px;color:var(--muted);padding:4px 0;" id="emojiRecentEmpty">ยังไม่มีประวัติ</span>
-            </div>
-            <div class="emoji-category-tabs" id="emojiCatTabs"></div>
-            <div class="emoji-grid-wrap">
-              <div class="emoji-grid" id="emojiGrid"></div>
+          <div class="tip-wrap" id="tipWrap">
+            <textarea id="fTip" placeholder="บันทึกสิ่งที่เรียนรู้, จุดที่ต้องระวัง..." style="padding-bottom:36px;"></textarea>
+            <button class="emoji-toggle-btn" type="button" onclick="toggleEmojiPicker('fTip','tipWrap')" title="เลือก Emoji">😊</button>
+            <div class="emoji-picker-popup" id="emojiPopup_fTip">
+              <div class="emoji-search-row">
+                <input class="emoji-search-input" id="emojiSearch_fTip" placeholder="🔍 ค้นหาอีโมจิ..." oninput="filterEmojis('fTip')" autocomplete="off">
+              </div>
+              <div class="emoji-cats" id="emojiCats_fTip"></div>
+              <div class="emoji-grid-wrap">
+                <div class="emoji-grid" id="emojiGrid_fTip"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -2728,6 +2782,129 @@ function applySharedPayload(jsonStr) {
     return true;
   } catch(e) { return false; }
 }
+
+// ════════════════════════════════════════
+// EMOJI PICKER
+// ════════════════════════════════════════
+const EMOJI_CATS = [
+  { id:'recent', icon:'🕐', label:'ล่าสุด' },
+  { id:'face',   icon:'😀', label:'หน้า' },
+  { id:'hand',   icon:'👍', label:'มือ' },
+  { id:'heart',  icon:'❤️', label:'หัวใจ' },
+  { id:'animal', icon:'🐶', label:'สัตว์' },
+  { id:'food',   icon:'🍕', label:'อาหาร' },
+  { id:'travel', icon:'✈️', label:'เดินทาง' },
+  { id:'object', icon:'💡', label:'สิ่ง' },
+  { id:'symbol', icon:'⚡', label:'สัญลักษณ์' },
+  { id:'flag',   icon:'🚩', label:'ธง' },
+];
+
+const EMOJI_DATA = {
+  face: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖'],
+  hand: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💪','🦾','🖐️','🤜','🤛','💅','🤳'],
+  heart: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸','✡️','🔯','🕎','☯','☦','🛐','⛎','❤️‍🔥','❤️‍🩹'],
+  animal: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦩','🦢','🕊','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿','🦔'],
+  food: ['🍕','🍔','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🥨','🧀','🥗','🥙','🌮','🌯','🥪','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍎','🍏','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','🧄','🧅','🥔','🍠','🥐','☕','🍵','🫖','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'],
+  travel: ['✈️','🚀','🛸','🚁','🛶','⛵','🚤','🛥','🛳','⛴','🚢','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋','🚌','🚍','🚎','🚐','🚑','🚒','🚓','🚔','🚕','🚖','🚗','🚘','🚙','🚚','🚛','🚜','🏎','🏍','🛵','🛺','🚲','🛴','🛹','🛼','🚏','🛣','🛤','⛽','🚨','🚥','🚦','🛑','⚓','🗺','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞','🏟','🏛','🏗','🧱','🏘','🏚','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋'],
+  object: ['💡','🔦','🕯','🪔','💰','💴','💵','💶','💷','💸','💳','🪙','💹','📈','📉','📊','💼','📁','📂','🗂','📋','📌','📍','📎','🖇','📏','📐','✂️','🗃','🗄','🗑','🔒','🔓','🔏','🔐','🔑','🗝','🔨','🪓','⛏','⚒','🛠','🗡','⚔️','🛡','🔫','🪃','🏹','🪚','🔧','🪛','🔩','⚙️','🗜','🔗','⛓','🪝','🧲','🪜','🧪','🧫','🧬','🔬','🔭','📡','💊','💉','🩺','🩹','🩻','🩼','🩺','🧸','🪆','🪅','🎭','🎨','🖼','🧵','🪡','🧶','🪢','👓','🕶','🥽','🌂','☂️','🧵','👜','👛','👝','🎒','🧳','👒','🎩','🧢','⛑','📿','💄','💍','💎','🔮','🧿','🪬'],
+  symbol: ['⚡','🔥','💥','✨','🌟','⭐','💫','❄️','🌊','💨','🌀','🌈','🌂','⚡','🔔','🔕','🎵','🎶','🎼','🎤','🎧','📻','🎷','🎸','🎹','🎺','🎻','🥁','🪘','🎮','🎯','🎲','♟','🎰','🎳','⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸','🥌','🎿','⛷','🏂','🪂','🏋️','🤼','🤸','🤺','⛹️','🤾','🏌️','🏇','🧘','🏄','🏊','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖','🏵','🎗','🎫','🎟','🎪','♠️','♥️','♦️','♣️','🃏','🀄','🎴','✅','❌','❎','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🔶','🔷','🔸','🔹','🔺','🔻','💠','🔘','🔲','🔳'],
+  flag: ['🏁','🚩','🎌','🏴','🏳','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🇹🇭','🇺🇸','🇬🇧','🇯🇵','🇨🇳','🇰🇷','🇩🇪','🇫🇷','🇮🇹','🇪🇸','🇧🇷','🇦🇺','🇨🇦','🇷🇺','🇮🇳','🇸🇬','🇭🇰','🇮🇩','🇲🇾','🇵🇭','🇻🇳','🇦🇪','🇸🇦','🇮🇱','🇹🇷','🇪🇺'],
+};
+
+const EMOJI_HISTORY_KEY = 'emojiHistory_v1';
+let _emojiPickerTarget = null; // { textareaId, wrapId }
+
+function getEmojiHistory() {
+  try { return JSON.parse(localStorage.getItem(EMOJI_HISTORY_KEY) || '[]'); } catch(e) { return []; }
+}
+function addEmojiHistory(emoji) {
+  let h = getEmojiHistory().filter(e => e !== emoji);
+  h.unshift(emoji);
+  if (h.length > 32) h = h.slice(0, 32);
+  try { localStorage.setItem(EMOJI_HISTORY_KEY, JSON.stringify(h)); } catch(e) {}
+}
+
+function toggleEmojiPicker(textareaId, wrapId) {
+  const popup = document.getElementById('emojiPopup_' + textareaId);
+  if (!popup) return;
+  const isOpen = popup.classList.contains('open');
+  // Close all pickers first
+  document.querySelectorAll('.emoji-picker-popup.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) {
+    popup.classList.add('open');
+    _emojiPickerTarget = { textareaId, wrapId };
+    buildEmojiPicker(textareaId);
+    const si = document.getElementById('emojiSearch_' + textareaId);
+    if (si) { si.value = ''; si.focus(); }
+  }
+}
+
+function buildEmojiPicker(textareaId, activeCat) {
+  const catsEl = document.getElementById('emojiCats_' + textareaId);
+  const gridEl = document.getElementById('emojiGrid_' + textareaId);
+  if (!catsEl || !gridEl) return;
+
+  const history = getEmojiHistory();
+  const allCats = history.length > 0 ? EMOJI_CATS : EMOJI_CATS.filter(c => c.id !== 'recent');
+  const currentCat = activeCat || (history.length > 0 ? 'recent' : 'face');
+
+  // Build category tabs
+  catsEl.innerHTML = allCats.map(c =>
+    `<button class="emoji-cat-btn ${c.id === currentCat ? 'active' : ''}" title="${c.label}"
+      onclick="buildEmojiPicker('${textareaId}','${c.id}')">${c.icon}</button>`
+  ).join('');
+
+  // Build grid
+  let emojis = currentCat === 'recent' ? history : (EMOJI_DATA[currentCat] || []);
+
+  // Filter by search
+  const si = document.getElementById('emojiSearch_' + textareaId);
+  const q = si ? si.value.trim() : '';
+  if (q) {
+    // Search across all categories
+    emojis = Object.values(EMOJI_DATA).flat().filter(e => e.includes(q));
+    // no category highlight when searching
+  }
+
+  if (emojis.length === 0) {
+    gridEl.innerHTML = '<div class="emoji-empty">ไม่พบอีโมจิ 😅</div>';
+  } else {
+    gridEl.innerHTML = emojis.map(e =>
+      `<button class="emoji-item" onclick="insertEmoji('${textareaId}','${e}')" title="${e}">${e}</button>`
+    ).join('');
+  }
+
+  // Store current cat for filter reuse
+  gridEl.dataset.cat = q ? '_search' : currentCat;
+}
+
+function filterEmojis(textareaId) {
+  buildEmojiPicker(textareaId, '_search');
+}
+
+function insertEmoji(textareaId, emoji) {
+  const ta = document.getElementById(textareaId);
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const val   = ta.value;
+  ta.value = val.slice(0, start) + emoji + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + emoji.length;
+  ta.focus();
+  addEmojiHistory(emoji);
+  // refresh recent tab if active
+  const gridEl = document.getElementById('emojiGrid_' + textareaId);
+  if (gridEl && gridEl.dataset.cat === 'recent') {
+    buildEmojiPicker(textareaId, 'recent');
+  }
+}
+
+// Close picker on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.tip-wrap')) {
+    document.querySelectorAll('.emoji-picker-popup.open').forEach(p => p.classList.remove('open'));
+  }
+}, true);
 </script>
 
 <!-- SHARE MODAL -->
