@@ -547,13 +547,6 @@ input[readonly]{opacity:0.6;cursor:default !important;}
 }
 .emoji-picker-popup.open{display:flex;}
 @keyframes emojiIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.emoji-search-row{padding:8px 8px 0;display:flex;gap:6px;align-items:center;}
-.emoji-search-input{
-  flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:7px;
-  padding:5px 9px;color:var(--text);font-size:12px;outline:none;
-  font-family:'Outfit',sans-serif;
-}
-.emoji-search-input:focus{border-color:var(--accent);}
 .emoji-cats{
   display:flex;gap:0;border-bottom:1px solid var(--border2);padding:4px 6px 0;
   overflow-x:auto;flex-shrink:0;
@@ -1271,9 +1264,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
             <textarea id="fTip" placeholder="บันทึกสิ่งที่เรียนรู้, จุดที่ต้องระวัง..." style="padding-bottom:36px;"></textarea>
             <button class="emoji-toggle-btn" type="button" onclick="toggleEmojiPicker('fTip','tipWrap')" title="เลือก Emoji">😊</button>
             <div class="emoji-picker-popup" id="emojiPopup_fTip">
-              <div class="emoji-search-row">
-                <input class="emoji-search-input" id="emojiSearch_fTip" placeholder="🔍 ค้นหาอีโมจิ..." oninput="filterEmojis('fTip')" autocomplete="off">
-              </div>
               <div class="emoji-cats" id="emojiCats_fTip"></div>
               <div class="emoji-grid-wrap">
                 <div class="emoji-grid" id="emojiGrid_fTip"></div>
@@ -2835,7 +2825,7 @@ function toggleEmojiPicker(textareaId, wrapId) {
     _emojiPickerTarget = { textareaId, wrapId };
     buildEmojiPicker(textareaId);
     const si = document.getElementById('emojiSearch_' + textareaId);
-    if (si) { si.value = ''; si.focus(); }
+    if (si) { si.value = ''; }
   }
 }
 
@@ -2857,15 +2847,6 @@ function buildEmojiPicker(textareaId, activeCat) {
   // Build grid
   let emojis = currentCat === 'recent' ? history : (EMOJI_DATA[currentCat] || []);
 
-  // Filter by search
-  const si = document.getElementById('emojiSearch_' + textareaId);
-  const q = si ? si.value.trim() : '';
-  if (q) {
-    // Search across all categories
-    emojis = Object.values(EMOJI_DATA).flat().filter(e => e.includes(q));
-    // no category highlight when searching
-  }
-
   if (emojis.length === 0) {
     gridEl.innerHTML = '<div class="emoji-empty">ไม่พบอีโมจิ 😅</div>';
   } else {
@@ -2875,11 +2856,7 @@ function buildEmojiPicker(textareaId, activeCat) {
   }
 
   // Store current cat for filter reuse
-  gridEl.dataset.cat = q ? '_search' : currentCat;
-}
-
-function filterEmojis(textareaId) {
-  buildEmojiPicker(textareaId, '_search');
+  gridEl.dataset.cat = currentCat;
 }
 
 function insertEmoji(textareaId, emoji) {
