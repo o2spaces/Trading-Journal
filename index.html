@@ -586,6 +586,39 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   z-index: 2;
 }
+
+/* ── EDIT / DELETE BUTTONS ── */
+.ts-edit-btn, .ts-del-btn {
+  width:26px;height:26px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;cursor:pointer;font-size:12px;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all 0.15s;padding:0;line-height:1;
+}
+.ts-edit-btn:hover { border-color:var(--blue); background:rgba(61,158,255,0.12); }
+.ts-del-btn:hover  { border-color:var(--red);  background:rgba(255,71,87,0.12);  }
+
+/* ── EDIT TRADE MODAL ── */
+.edit-modal {
+  background:var(--card);border:1px solid var(--border3);border-radius:16px;
+  width:760px;max-width:96vw;max-height:93vh;overflow-y:auto;animation:modalIn 0.22s ease;
+}
+.edit-modal-header {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border2);
+  background:var(--card2);border-radius:16px 16px 0 0;position:sticky;top:0;z-index:10;
+}
+.edit-modal-title { font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px; }
+.edit-modal-body  { padding:20px; }
+.edit-section-title {
+  font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;
+  text-transform:uppercase;margin:14px 0 8px;display:flex;align-items:center;gap:8px;
+}
+.edit-section-title::after { content:'';flex:1;height:1px;background:var(--border2); }
+.edit-save-btn {
+  width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:9px;
+  font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:8px;font-family:'Outfit',sans-serif;
+}
+.edit-save-btn:hover { background:var(--accent2);box-shadow:0 4px 20px rgba(26,108,255,0.35); }
 </style>
 </head>
 <body>
@@ -977,6 +1010,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
       <table class="ts-table">
         <thead>
           <tr>
+            <th style="width:70px;">Actions</th>
             <th onclick="tsSortCol('date')">#<span class="sort-arrow">↕</span></th>
             <th onclick="tsSortCol('date')">Date<span class="sort-arrow" id="thDate">↕</span></th>
             <th onclick="tsSortCol('asset')">Asset<span class="sort-arrow" id="thAsset">↕</span></th>
@@ -2422,7 +2456,7 @@ function renderTsOrders() {
   const body = document.getElementById('tsOrderBody');
   if (body) {
     if (pageItems.length === 0) {
-      body.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">ยังไม่มี trade</td></tr>`;
+      body.innerHTML = `<tr><td colspan="16" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">ยังไม่มี trade</td></tr>`;
     } else {
       body.innerHTML = pageItems.map((t, i) => {
         const idx = start + i + 1;
@@ -2452,6 +2486,10 @@ function renderTsOrders() {
           noteCell = '—';
         }
         return `<tr>
+          <td style="white-space:nowrap;">
+            <button class="ts-edit-btn" onclick="openEditTrade('${t.id}')" title="แก้ไข">✏️</button>
+            <button class="ts-del-btn" onclick="deleteTrade('${t.id}')" title="ลบ">🗑</button>
+          </td>
           <td class="td-num" style="color:var(--muted)">${idx}</td>
           <td class="td-num">${date}</td>
           <td><strong>${t.asset||'—'}</strong></td>
@@ -2920,6 +2958,256 @@ document.addEventListener('click', function(e) {
     document.querySelectorAll('.emoji-picker-popup.open').forEach(p => p.classList.remove('open'));
   }
 }, true);
+
+// ════════════════════════════════════════
+// EDIT TRADE
+// ════════════════════════════════════════
+let _editTradeId   = null;
+let _editPortId    = null;
+let _eRiskUserEdit = false;
+
+function openEditTrade(tradeId) {
+  if (isViewOnly) return;
+  const portId = activePortId;
+  const trades = allTrades[portId] || [];
+  const t = trades.find(x => String(x.id) === String(tradeId));
+  if (!t) { toast('⚠️ ไม่พบ Trade นี้', 'error'); return; }
+
+  _editTradeId   = tradeId;
+  _editPortId    = portId;
+  _eRiskUserEdit = false;
+
+  // Badge
+  const badge = document.getElementById('editTradeIdBadge');
+  if (badge) badge.textContent = '#' + String(tradeId).slice(-8);
+
+  // Fill all fields
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  const setSel = (id, v) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const opt = [...el.options].find(o => o.value === String(v));
+    if (opt) el.value = String(v);
+  };
+
+  setSel('eFDay',      t.day);
+  setSel('eFSession',  t.session);
+  setVal('eFDate',     (t.date||'').split('T')[0]);
+  setSel('eFTimeSlot', t.timeSlot);
+  setSel('eFAsset',    t.asset);
+  setVal('eFDuration', t.duration || '');
+  setVal('eFTimeEntry',  t.timeEntry  || '');
+  setVal('eFTimeExited', t.timeExited || '');
+  setSel('eFCode',  t.code);
+  setSel('eFClass', t.cls);
+  setSel('eFMode',  t.mode);
+  setSel('eFModel', t.model);
+  setSel('eFZone',  t.zone);
+  setVal('eFEntry',  t.priceEntry  || '');
+  setVal('eFTarget', t.priceTarget || '');
+  setVal('eFSL',     t.priceSL     || '');
+  setSel('eFResult', t.result);
+  setVal('eFMaxRR',   t.maxRR    || '');
+  setVal('eFPicture', t.pictureUrl || '');
+  setVal('eFTip',     t.tip || '');
+  setVal('eFRisk',    t.risk || '');
+
+  eCalcAuto();
+  document.getElementById('editTradeOverlay').classList.add('show');
+}
+
+function closeEditTrade() {
+  document.getElementById('editTradeOverlay').classList.remove('show');
+  _editTradeId = null; _editPortId = null; _eRiskUserEdit = false;
+}
+
+// Auto-calc for edit form (mirrors calcAuto logic)
+function eCalcAuto() {
+  const entry  = parseFloat(document.getElementById('eFEntry').value);
+  const target = parseFloat(document.getElementById('eFTarget').value);
+  const sl     = parseFloat(document.getElementById('eFSL').value);
+  const result = document.getElementById('eFResult').value;
+  const asset  = document.getElementById('eFAsset').value;
+  const spec   = ASSET_SPECS[asset] || { lotMode:'fixed', tickSize:1, dollarPerTick:0, displayMult:1, label:'—' };
+  const riskTarget = savedRisk;
+
+  // Position
+  let pos = '—';
+  if (!isNaN(entry) && !isNaN(sl)) pos = entry > sl ? 'Buy' : 'Sell';
+  const posEl = document.getElementById('eFPosition');
+  if (posEl) { posEl.value = pos; posEl.style.color = pos==='Buy'?'var(--green)':pos==='Sell'?'var(--red)':''; }
+
+  const rawDist = (!isNaN(entry) && !isNaN(sl)) ? Math.abs(entry - sl) : 0;
+  const dpr     = dollarPerRaw(asset);
+
+  // Lots + Actual Risk
+  let lots = 0, actualRisk = 0;
+  if (rawDist > 0 && dpr > 0) {
+    if (spec.lotMode === 'variable') {
+      lots = Math.floor(riskTarget / (rawDist * dpr));
+      if (lots < 1) lots = 0;
+      actualRisk = lots * rawDist * dpr;
+    } else {
+      lots = 1;
+      actualRisk = rawDist * dpr;
+    }
+  }
+
+  const lotEl = document.getElementById('eFLot');
+  if (lotEl) lotEl.value = lots > 0 ? lots + (spec.lotMode==='variable'?' contracts':' contract') : '—';
+
+  const arEl = document.getElementById('eFActualRisk');
+  if (arEl) { arEl.value = actualRisk > 0 ? '$' + actualRisk.toFixed(2) : ''; arEl.style.color = actualRisk > riskTarget*1.001?'var(--red)':'var(--green)'; }
+
+  // Commission
+  const commVal = getCommission(asset, lots);
+  const commEl  = document.getElementById('eFCommission');
+  if (commEl) { commEl.value = commVal > 0 ? '-$' + commVal.toFixed(2) : lots > 0 ? '$0.00' : ''; commEl.style.color = commVal>0?'var(--red)':'var(--muted)'; }
+
+  // RR
+  let rr = 0;
+  if (!isNaN(entry) && !isNaN(target) && !isNaN(sl)) {
+    const rPts = Math.abs(entry - sl), rwPts = Math.abs(target - entry);
+    rr = rPts > 0 ? rwPts / rPts : 0;
+  }
+  const rrEl = document.getElementById('eFRR');
+  if (rrEl) rrEl.value = rr > 0 ? rr.toFixed(2) : '';
+
+  // Risk (fill only if user hasn't manually edited)
+  const riskEl = document.getElementById('eFRisk');
+  if (riskEl && !_eRiskUserEdit) riskEl.value = actualRisk > 0 ? actualRisk.toFixed(2) : '';
+
+  eCalcPnl();
+}
+
+function eCalcPnl() {
+  const result = document.getElementById('eFResult').value;
+  const risk   = parseFloat(document.getElementById('eFRisk').value) || 0;
+  const rr     = parseFloat(document.getElementById('eFRR').value)   || 0;
+  let pnl = 0;
+  if      (result === 'TP')   pnl = risk * rr;
+  else if (result === 'Loss') pnl = -risk;
+  const pnlEl = document.getElementById('eFPnl');
+  if (pnlEl) { pnlEl.value = pnl !== 0 ? pnl.toFixed(2) : ''; pnlEl.style.color = pnl>0?'var(--green)':pnl<0?'var(--red)':''; }
+}
+
+// Wire up eFRisk manual edit flag
+document.addEventListener('DOMContentLoaded', () => {
+  const eRiskEl = document.getElementById('eFRisk');
+  if (eRiskEl) {
+    eRiskEl.addEventListener('input', () => { _eRiskUserEdit = true; eCalcPnl(); });
+    eRiskEl.addEventListener('change', () => { if (!eRiskEl.value) _eRiskUserEdit = false; });
+  }
+});
+
+function saveEditTrade() {
+  if (!_editTradeId || !_editPortId) return;
+  const portId = _editPortId;
+  const trades = allTrades[portId] || [];
+  const idx    = trades.findIndex(x => String(x.id) === String(_editTradeId));
+  if (idx === -1) { toast('⚠️ ไม่พบ Trade นี้', 'error'); return; }
+
+  const result = document.getElementById('eFResult').value;
+  if (!result) { toast('⚠️ กรุณาเลือก Result ก่อนบันทึก!', 'error'); return; }
+
+  const date = document.getElementById('eFDate').value;
+  if (!date) { toast('⚠️ กรุณาเลือกวันที่', 'error'); return; }
+
+  const risk   = parseFloat(document.getElementById('eFRisk').value) || 0;
+  const rr     = parseFloat(document.getElementById('eFRR').value)   || 0;
+  const pnl    = parseFloat(document.getElementById('eFPnl').value)  || 0;
+  const asset  = document.getElementById('eFAsset').value;
+  const entry  = parseFloat(document.getElementById('eFEntry').value)  || 0;
+  const target = parseFloat(document.getElementById('eFTarget').value) || 0;
+  const slP    = parseFloat(document.getElementById('eFSL').value)     || 0;
+  const lotRaw = (document.getElementById('eFLot').value || '').replace(/[^0-9]/g, '');
+  const lots   = parseInt(lotRaw) || 0;
+
+  const updated = {
+    ...trades[idx],
+    day        : document.getElementById('eFDay').value,
+    session    : document.getElementById('eFSession').value,
+    date       : date,
+    timeSlot   : document.getElementById('eFTimeSlot').value,
+    asset      : asset,
+    duration   : parseInt(document.getElementById('eFDuration').value) || 0,
+    timeEntry  : document.getElementById('eFTimeEntry').value,
+    timeExited : document.getElementById('eFTimeExited').value,
+    code       : document.getElementById('eFCode').value,
+    cls        : document.getElementById('eFClass').value,
+    mode       : document.getElementById('eFMode').value,
+    model      : document.getElementById('eFModel').value,
+    zone       : document.getElementById('eFZone').value,
+    priceEntry : entry,
+    priceTarget: target,
+    priceSL    : slP,
+    result     : result,
+    risk       : risk,
+    rr         : rr,
+    pnl        : pnl,
+    lots       : lots,
+    commission : getCommission(asset, lots),
+    maxRR      : parseFloat(document.getElementById('eFMaxRR').value)   || 0,
+    pictureUrl : document.getElementById('eFPicture').value,
+    position   : entry > 0 && slP > 0 ? (entry > slP ? 'Buy' : 'Sell') : trades[idx].position,
+    point      : entry > 0 && target > 0 ? Math.abs(target - entry) : 0,
+    slPoints   : entry > 0 && slP > 0 ? Math.abs(entry - slP) * (ASSET_SPECS[asset]?.displayMult || 1) : 0,
+    sl_dollar  : result === 'Loss' ? -risk : 0,
+    tp_dollar  : result === 'TP'   ? pnl  : 0,
+    tip        : document.getElementById('eFTip').value,
+    updatedAt  : new Date().toISOString(),
+  };
+
+  allTrades[portId][idx] = updated;
+  localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+  renderDash(portId);
+  closeEditTrade();
+  toast('✅ แก้ไข Trade เรียบร้อย', 'success');
+
+  // Sync Google Sheet ถ้ามี (update action)
+  if (SCRIPT_URL) {
+    const port = portfolios.find(p => p.id === portId);
+    fetch(SCRIPT_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'updateTrade', trade: updated, sheet: port?.name || '' })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) toast('☁️ ซิงค์ Sheet แก้ไขเรียบร้อย!', 'success');
+      else toast('⚠️ Local OK แต่ Sheet: ' + (data.error||''), 'error');
+    })
+    .catch(e => toast('⚠️ Local OK แต่ซิงค์ไม่ได้: ' + e.message, 'error'));
+  }
+}
+
+// ════════════════════════════════════════
+// DELETE TRADE
+// ════════════════════════════════════════
+function deleteTrade(tradeId) {
+  if (isViewOnly) return;
+  if (!confirm('ลบ Trade นี้? ไม่สามารถกู้คืนได้')) return;
+  const portId = activePortId;
+  const trades = allTrades[portId] || [];
+  const idx    = trades.findIndex(x => String(x.id) === String(tradeId));
+  if (idx === -1) { toast('⚠️ ไม่พบ Trade นี้', 'error'); return; }
+
+  const deleted = allTrades[portId].splice(idx, 1)[0];
+  localStorage.setItem('demoTrades', JSON.stringify(allTrades));
+  renderDash(portId);
+  toast('🗑 ลบ Trade เรียบร้อย', 'success');
+
+  // Sync Google Sheet
+  if (SCRIPT_URL) {
+    const port = portfolios.find(p => p.id === portId);
+    fetch(SCRIPT_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteTrade', id: deleted.id, sheet: port?.name || '' })
+    })
+    .then(r => r.json())
+    .then(data => { if (!data.success) toast('⚠️ Local OK แต่ Sheet: ' + (data.error||''), 'error'); })
+    .catch(e => toast('⚠️ Local OK แต่ซิงค์ไม่ได้: ' + e.message, 'error'));
+  }
+}
 </script>
 
 <!-- SHARE MODAL -->
@@ -2954,6 +3242,197 @@ document.addEventListener('click', function(e) {
           <span style="color:var(--muted);font-size:10px;margin-top:3px;display:block;">⚠️ ต้องตั้งค่า Script URL และ <strong>Re-deploy Google Apps Script ใหม่</strong> (New Deployment) ก่อนใช้งาน</span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: EDIT TRADE ══════════════════ -->
+<div class="modal-overlay" id="editTradeOverlay" onclick="if(event.target===this)closeEditTrade()">
+  <div class="edit-modal">
+    <div class="edit-modal-header">
+      <div class="edit-modal-title">✏️ แก้ไข Trade <span id="editTradeIdBadge" style="font-size:10px;color:var(--muted);font-weight:400;font-family:'Space Mono',monospace;"></span></div>
+      <button class="modal-close" onclick="closeEditTrade()">✕</button>
+    </div>
+    <div class="edit-modal-body">
+
+      <!-- Section: เวลา / Asset -->
+      <div class="edit-section-title">📅 วันที่ & Asset</div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="field">
+          <label>📅 Day</label>
+          <select id="eFDay">
+            <option value="Mon">Mon</option><option value="Tue">Tue</option>
+            <option value="Wed">Wed</option><option value="Thu">Thu</option>
+            <option value="Fri">Fri</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>🌐 Session</label>
+          <select id="eFSession">
+            <option value="AS">AS (Asia)</option><option value="LO">LO (London)</option>
+            <option value="NY">NY (New York)</option><option value="Out">Out</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>📆 Date</label>
+          <div class="input-icon-wrap"><input type="date" id="eFDate"><span class="input-icon-btn">📅</span></div>
+        </div>
+        <div class="field">
+          <label>🕐 Time Slot</label>
+          <select id="eFTimeSlot">
+            <option value="05:00-07:00">05:00-07:00</option>
+            <option value="07:00-09:00">07:00-09:00</option>
+            <option value="09:00-11:00">09:00-11:00</option>
+            <option value="11:00-14:00">11:00-14:00</option>
+            <option value="14:00-16:00">14:00-16:00</option>
+            <option value="16:00-18:00">16:00-18:00</option>
+            <option value="18:00-19:00">18:00-19:00</option>
+            <option value="19:00-21:00">19:00-21:00</option>
+            <option value="21:00-23:00">21:00-23:00</option>
+            <option value="23:00-01:00">23:00-01:00</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>📊 Asset</label>
+          <select id="eFAsset" onchange="eCalcAuto()">
+            <option value="MNQ1">MNQ1</option><option value="MGC1">MGC1</option>
+            <option value="GC1">GC1</option><option value="NQ1">NQ1</option>
+            <option value="XAUUSD">XAUUSD</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>⏱️ Duration (นาที)</label>
+          <input type="number" id="eFDuration" placeholder="เช่น 15" min="1" step="1">
+        </div>
+      </div>
+
+      <div class="form-row cols2" style="margin-bottom:10px;">
+        <div class="field">
+          <label>🟢 Time Entry</label>
+          <div class="input-icon-wrap"><input type="time" id="eFTimeEntry"><span class="input-icon-btn">🕐</span></div>
+        </div>
+        <div class="field">
+          <label>🔴 Time Exited</label>
+          <div class="input-icon-wrap"><input type="time" id="eFTimeExited"><span class="input-icon-btn">🕑</span></div>
+        </div>
+      </div>
+
+      <!-- Section: Classification -->
+      <div class="edit-section-title">🏷️ Classification</div>
+      <div class="form-row cols3" style="margin-bottom:10px;">
+        <div class="field">
+          <label>🔖 Code</label>
+          <select id="eFCode">
+            <option value="Code1">Code1</option><option value="Code2">Code2</option><option value="Nochi">Nochi</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>🏅 Class</label>
+          <select id="eFClass">
+            <option value="A+">A+</option><option value="A">A</option><option value="B">B</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>⚙️ Mode</label>
+          <select id="eFMode">
+            <option value="Be">Be</option><option value="CHe">CHe</option>
+            <option value="BE>B">BE&gt;B</option><option value="CHe>B">CHe&gt;B</option>
+            <option value="BE>CHe">BE&gt;CHe</option><option value="CHe>BE">CHe&gt;BE</option>
+            <option value="BE>BE">BE&gt;BE</option><option value="CHe>CHe">CHe&gt;CHe</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols2" style="margin-bottom:10px;">
+        <div class="field">
+          <label>🧱 Model</label>
+          <select id="eFModel">
+            <option value="RBR">RBR</option><option value="RBD">RBD</option>
+            <option value="DBD">DBD</option><option value="DBR">DBR</option>
+            <option value="R">R</option><option value="D">D</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>🗺️ Mitigated Zone</label>
+          <select id="eFZone">
+            <option value="Bos1">Bos1</option><option value="Bos1 ย้าย">Bos1 ย้าย</option>
+            <option value="Bos สุดท้าย">Bos สุดท้าย</option><option value="ไม่มี">ไม่มี</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Section: Price -->
+      <div class="edit-section-title">📌 Price & Result</div>
+      <div class="price-box" style="margin-bottom:10px;">
+        <div class="form-row cols3" style="margin-bottom:0;">
+          <div class="field"><label>📍 Entry</label><input type="number" id="eFEntry" step="0.01" oninput="eCalcAuto()"></div>
+          <div class="field"><label>🎯 Target</label><input type="number" id="eFTarget" step="0.01" oninput="eCalcAuto()"></div>
+          <div class="field"><label>🛑 Stop Loss</label><input type="number" id="eFSL" step="0.01" oninput="eCalcAuto()"></div>
+        </div>
+      </div>
+      <div class="form-row cols3" style="margin-bottom:10px;">
+        <div class="field">
+          <label>🎯 Result <span style="color:var(--red);font-size:10px;">* จำเป็น</span></label>
+          <select id="eFResult" onchange="eCalcAuto()">
+            <option value="">— เลือก —</option>
+            <option value="TP">TP (Win)</option>
+            <option value="Loss">Loss (SL)</option>
+            <option value="Miss">Miss</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>📐 Max RR</label>
+          <input type="number" id="eFMaxRR" step="0.1" min="0">
+        </div>
+        <div class="field">
+          <label>🖼️ Picture URL</label>
+          <input type="text" id="eFPicture" placeholder="https://...">
+        </div>
+      </div>
+
+      <!-- Section: Calculated -->
+      <div class="calc-box">
+        <div class="calc-box-title">⚡ Calculated (แก้ Risk ได้)</div>
+        <div class="form-row cols4" style="margin-bottom:8px;">
+          <div class="field">
+            <label>Position <span class="calc-badge">Auto</span></label>
+            <input type="text" id="eFPosition" readonly>
+          </div>
+          <div class="field">
+            <label>Risk ($) <span style="font-size:9px;background:rgba(255,154,60,0.15);color:var(--orange);padding:1px 5px;border-radius:4px;font-weight:700;">Editable</span></label>
+            <input type="number" id="eFRisk" step="0.01" min="0" oninput="eCalcPnl()" style="color:var(--orange);">
+          </div>
+          <div class="field">
+            <label>RR <span class="calc-badge">Auto</span></label>
+            <input type="number" id="eFRR" readonly step="0.01">
+          </div>
+          <div class="field">
+            <label>PnL ($) <span class="calc-badge">Auto</span></label>
+            <input type="number" id="eFPnl" readonly step="0.01">
+          </div>
+        </div>
+        <div class="form-row cols3" style="margin-bottom:0;">
+          <div class="field">
+            <label>Lots <span class="calc-badge">Auto</span></label>
+            <input type="text" id="eFLot" readonly style="color:var(--cyan);">
+          </div>
+          <div class="field">
+            <label>Commission $ <span style="font-size:9px;background:rgba(255,71,87,0.12);color:var(--red);padding:1px 5px;border-radius:4px;font-weight:700;">Topstep</span></label>
+            <input type="text" id="eFCommission" readonly style="color:var(--red);">
+          </div>
+          <div class="field">
+            <label>Actual Risk $ <span class="calc-badge">Auto</span></label>
+            <input type="text" id="eFActualRisk" readonly>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note -->
+      <div class="edit-section-title">💡 Note</div>
+      <div class="field" style="margin-bottom:12px;">
+        <textarea id="eFTip" placeholder="บันทึกสิ่งที่เรียนรู้..." style="min-height:60px;"></textarea>
+      </div>
+
+      <button class="edit-save-btn" onclick="saveEditTrade()">💾 บันทึกการแก้ไข</button>
     </div>
   </div>
 </div>
