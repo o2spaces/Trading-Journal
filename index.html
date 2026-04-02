@@ -987,6 +987,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
             <th onclick="tsSortCol('rr')">R:R<span class="sort-arrow" id="thRR">↕</span></th>
             <th onclick="tsSortCol('risk')">Risk $<span class="sort-arrow" id="thRisk">↕</span></th>
             <th onclick="tsSortCol('pnl')">P&L<span class="sort-arrow" id="thPnl">↕</span></th>
+            <th>Commission</th>
             <th>Code</th>
             <th>Class</th>
             <th>Mode</th>
@@ -1245,7 +1246,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
               <input type="number" id="fPnl" readonly placeholder="200.00" step="0.01">
             </div>
           </div>
-          <div class="form-row cols2" style="margin-bottom:0;">
+          <div class="form-row cols3" style="margin-bottom:0;">
             <div class="field">
               <label>TP% <span class="calc-badge">Auto</span></label>
               <input type="text" id="fTPPct" readonly placeholder="—">
@@ -1253,6 +1254,10 @@ input[type="time"]::-webkit-calendar-picker-indicator {
             <div class="field">
               <label>TP Reward $ <span class="calc-badge">Auto</span></label>
               <input type="number" id="fTPDollar" readonly placeholder="0.00" step="0.01">
+            </div>
+            <div class="field">
+              <label>Commission $ <span style="font-size:9px;background:rgba(255,71,87,0.12);color:var(--red);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700;">Topstep</span></label>
+              <input type="text" id="fCommission" readonly placeholder="0.00" style="color:var(--red);">
             </div>
           </div>
         </div>
@@ -1448,6 +1453,20 @@ const ASSET_SPECS = {
   'XAUUSD': { lotMode:'fixed',    tickSize:0.10, dollarPerTick:10,  displayMult:10, label:'$10/tick' },
 };
 
+// ── Topstep Commission (per lot/contract per order, one-way) ──
+const TOPSTEP_COMMISSION = {
+  'NQ1'   : 2.80,
+  'MNQ1'  : 0.74,
+  'GC1'   : 3.24,
+  'MGC1'  : 1.24,
+  'XAUUSD': 0,
+};
+
+function getCommission(asset, lots) {
+  const rate = TOPSTEP_COMMISSION[asset] || 0;
+  return rate * (lots || 0);
+}
+
 // $ ต่อ rawDist หนึ่งหน่วย ต่อ 1 contract = dollarPerTick / tickSize
 function dollarPerRaw(asset) {
   const s = ASSET_SPECS[asset]; if (!s) return 0;
@@ -1510,6 +1529,19 @@ function calcAuto() {
   }
   const arEl = document.getElementById('fActualRisk');
   if (arEl) { arEl.value = actualRisk > 0 ? actualRisk.toFixed(2) : ''; arEl.style.color = actualRisk > riskTarget*1.001 ? 'var(--red)' : 'var(--green)'; }
+
+  // ── Commission (Topstep, ครั้งเดียวต่อ Order) ──
+  const commVal = getCommission(asset, lots);
+  const commEl = document.getElementById('fCommission');
+  if (commEl) {
+    if (commVal > 0) {
+      commEl.value = '-$' + commVal.toFixed(2);
+      commEl.style.color = 'var(--red)';
+    } else {
+      commEl.value = lots > 0 ? '$0.00' : '';
+      commEl.style.color = 'var(--muted)';
+    }
+  }
 
   // ── Warning ──
   const warnEl = document.getElementById('riskWarn');
@@ -1657,6 +1689,7 @@ function collectForm() {
     result      : result,
     risk        : risk,
     lots        : lots,
+    commission  : getCommission(document.getElementById('fAsset').value, lots),
     riskTarget  : getRiskTarget(),
     maxRR       : parseFloat(document.getElementById('fMaxRR').value) || 0,
     pictureUrl  : document.getElementById('fPicture').value,
@@ -2389,7 +2422,7 @@ function renderTsOrders() {
   const body = document.getElementById('tsOrderBody');
   if (body) {
     if (pageItems.length === 0) {
-      body.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">ยังไม่มี trade</td></tr>`;
+      body.innerHTML = `<tr><td colspan="15" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">ยังไม่มี trade</td></tr>`;
     } else {
       body.innerHTML = pageItems.map((t, i) => {
         const idx = start + i + 1;
@@ -2402,6 +2435,8 @@ function renderTsOrders() {
         const posCls = pos==='Buy'?'buy':'sell';
         const rr = parseFloat(t.rr)||0;
         const risk = parseFloat(t.risk)||0;
+        const lots = parseInt(t.lots)||0;
+        const comm = t.commission !== undefined ? parseFloat(t.commission) : getCommission(t.asset, lots);
         const date = (t.date||'').split('T')[0];
         const tipFull = t.tip||'';
         const picUrl  = t.pictureUrl||'';
@@ -2427,6 +2462,7 @@ function renderTsOrders() {
           <td class="td-num">${rr>0?rr.toFixed(2):'—'}</td>
           <td class="td-num" style="color:var(--orange)">${risk>0?'$'+risk.toFixed(2):'—'}</td>
           <td class="ts-pnl-cell ${pnlCls}">${pnlStr}</td>
+          <td class="td-num" style="color:${comm>0?'var(--red)':'var(--muted)'}">${comm>0?'-$'+comm.toFixed(2):'—'}</td>
           <td style="color:var(--muted2)">${t.code||'—'}</td>
           <td style="color:var(--yellow)">${t.cls||'—'}</td>
           <td style="color:var(--muted)">${t.mode||'—'}</td>
@@ -2514,6 +2550,8 @@ function genDemo() {
       priceTarget: parseFloat(target.toFixed(2)),
       priceSL: parseFloat(sl.toFixed(2)),
       result: r, risk: parseFloat(risk.toFixed(2)), rr, pnl: parseFloat(pnl.toFixed(2)),
+      lots: 1,
+      commission: parseFloat(getCommission(asset, 1).toFixed(2)),
       maxRR: rr+Math.random(), position: isBuy?'Buy':'Sell',
       slPoints: parseFloat(slDist.toFixed(2)),
       tip: '', pictureUrl: ''
@@ -2558,7 +2596,7 @@ function setTodayDate() {
 }
 
 function resetForm() {
-  ['fEntry','fTarget','fSL','fRisk','fRR','fPnl','fTPPct','fTPDollar','fActualRisk',
+  ['fEntry','fTarget','fSL','fRisk','fRR','fPnl','fTPPct','fTPDollar','fCommission','fActualRisk',
    'fMaxRR','fPicture','fTip','fDuration','fSLPoints','fLot','fDPP','fTimeExited'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.value = ''; el.style.color = ''; delete el.dataset.userEdited; }
