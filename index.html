@@ -1319,6 +1319,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!riskEl.value) delete riskEl.dataset.userEdited;
   });
 
+  // ถ้ามี ?s= ใน URL = เปิดจาก link แชร์ → แสดง loading ทันที ก่อน fetch
+  const sharedParam = new URLSearchParams(location.search).get('s');
+  const hashShared  = location.hash.startsWith('#share=');
+  if (sharedParam || hashShared) {
+    showLoading('กำลังโหลดข้อมูลพอร์ต');
+  }
+
   const isShared = await loadSharedFromHash();
   if (isShared) {
     loadPort(activePortId);
@@ -2585,7 +2592,8 @@ async function generateShareLink() {
     });
     const data = await res.json();
     if (data.success && data.id) {
-      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id;
+      const gsParam = btoa(SCRIPT_URL);
+      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id + '&gs=' + encodeURIComponent(gsParam);
       showShareUrl(url);
       return;
     }
@@ -2646,17 +2654,28 @@ function copyShareLink() {
 
 // ── Load shared data from URL ──
 async function loadSharedFromHash() {
-  // Short link via GAS: ?s=XXXXXXXX
-  const params = new URLSearchParams(location.search);
+  const params  = new URLSearchParams(location.search);
   const shareId = params.get('s');
-  if (shareId && SCRIPT_URL) {
-    try {
-      const res  = await fetch(`${SCRIPT_URL}?action=getShare&id=${encodeURIComponent(shareId)}`);
-      const data = await res.json();
-      if (data.success && data.payload) {
-        return applySharedPayload(data.payload);
-      }
-    } catch(e) { console.warn('Short share load error:', e); }
+  const gsParam = params.get('gs');
+
+  if (shareId) {
+    // ถอด SCRIPT_URL จาก ?gs= ที่ embed มากับ link (เพื่อให้คนรับ link fetch ได้)
+    let scriptToUse = SCRIPT_URL;
+    if (gsParam) {
+      try { scriptToUse = atob(decodeURIComponent(gsParam)); } catch(e) {}
+    }
+
+    if (scriptToUse) {
+      try {
+        const res  = await fetch(`${scriptToUse}?action=getShare&id=${encodeURIComponent(shareId)}`);
+        const data = await res.json();
+        if (data.success && data.payload) {
+          hideLoading();
+          return applySharedPayload(data.payload);
+        }
+      } catch(e) { console.warn('Short share load error:', e); }
+    }
+    hideLoading();
   }
 
   // Fallback: #share= base64 in hash
@@ -2664,10 +2683,13 @@ async function loadSharedFromHash() {
   if (hash.startsWith('#share=')) {
     try {
       const b64 = hash.slice(7);
-      return applySharedPayload(decodeURIComponent(escape(atob(b64))));
-    } catch(e) { console.warn('Hash share parse error:', e); }
+      const result = applySharedPayload(decodeURIComponent(escape(atob(b64))));
+      hideLoading();
+      return result;
+    } catch(e) { console.warn('Hash share parse error:', e); hideLoading(); }
   }
 
+  hideLoading();
   return false;
 }
 
