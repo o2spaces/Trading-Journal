@@ -2965,6 +2965,7 @@ document.addEventListener('click', function(e) {
 let _editTradeId   = null;
 let _editPortId    = null;
 let _eRiskUserEdit = false;
+let _eFilling      = false; // ป้องกัน eCalcAuto ทำงานตอน fill ข้อมูล
 
 function openEditTrade(tradeId) {
   if (isViewOnly) return;
@@ -3007,22 +3008,76 @@ function openEditTrade(tradeId) {
   setVal('eFTarget', t.priceTarget || '');
   setVal('eFSL',     t.priceSL     || '');
   setSel('eFResult', t.result);
-  setVal('eFMaxRR',   t.maxRR    || '');
+  setVal('eFMaxRR',   t.maxRR     || '');
   setVal('eFPicture', t.pictureUrl || '');
-  setVal('eFTip',     t.tip || '');
-  setVal('eFRisk',    t.risk || '');
+  setVal('eFTip',     t.tip        || '');
 
-  eCalcAuto();
+  // ── fill ค่า calculated จากที่บันทึกไว้จริงๆ ──
+  _eFilling = true; // หยุด eCalcAuto ไม่ให้ยิงระหว่าง fill
+  setVal('eFRisk', t.risk || '');
+  _eRiskUserEdit = true; // ล็อคไม่ให้ eCalcAuto ทับค่า risk ที่ดึงมา
+
+  // Position
+  const posEl = document.getElementById('eFPosition');
+  if (posEl) {
+    const pos = t.position || '—';
+    posEl.value = pos;
+    posEl.style.color = pos==='Buy'?'var(--green)':pos==='Sell'?'var(--red)':'';
+  }
+
+  // RR
+  setVal('eFRR', t.rr > 0 ? parseFloat(t.rr).toFixed(2) : '');
+
+  // PnL
+  const pnlVal = parseFloat(t.pnl) || 0;
+  const pnlEl2 = document.getElementById('eFPnl');
+  if (pnlEl2) {
+    pnlEl2.value = pnlVal !== 0 ? pnlVal.toFixed(2) : '';
+    pnlEl2.style.color = pnlVal > 0 ? 'var(--green)' : pnlVal < 0 ? 'var(--red)' : '';
+  }
+
+  // Lots
+  const lotsVal = parseInt(t.lots) || 0;
+  const spec_ = ASSET_SPECS[t.asset] || {};
+  const lotEl2 = document.getElementById('eFLot');
+  if (lotEl2) {
+    lotEl2.value = lotsVal > 0
+      ? lotsVal + (spec_.lotMode === 'variable' ? ' contracts' : ' contract')
+      : '—';
+  }
+
+  // Commission — ดึงจากค่าที่บันทึกไว้ก่อน ถ้าไม่มีค่อยคำนวณใหม่
+  const commSaved = t.commission !== undefined && t.commission !== null
+    ? parseFloat(t.commission)
+    : getCommission(t.asset, lotsVal);
+  const commEl2 = document.getElementById('eFCommission');
+  if (commEl2) {
+    commEl2.value = commSaved > 0 ? '-$' + commSaved.toFixed(2) : lotsVal > 0 ? '$0.00' : '';
+    commEl2.style.color = commSaved > 0 ? 'var(--red)' : 'var(--muted)';
+  }
+
+  // Actual Risk
+  const rawDist_ = (t.priceEntry > 0 && t.priceSL > 0) ? Math.abs(t.priceEntry - t.priceSL) : 0;
+  const dpr_     = dollarPerRaw(t.asset);
+  const actualRisk_ = rawDist_ > 0 && dpr_ > 0 ? lotsVal * rawDist_ * dpr_ : (parseFloat(t.risk) || 0);
+  const arEl2 = document.getElementById('eFActualRisk');
+  if (arEl2) {
+    arEl2.value = actualRisk_ > 0 ? '$' + actualRisk_.toFixed(2) : '';
+    arEl2.style.color = 'var(--green)';
+  }
+
+  _eFilling = false; // เปิดให้ eCalcAuto ทำงานได้อีกครั้ง
   document.getElementById('editTradeOverlay').classList.add('show');
 }
 
 function closeEditTrade() {
   document.getElementById('editTradeOverlay').classList.remove('show');
-  _editTradeId = null; _editPortId = null; _eRiskUserEdit = false;
+  _editTradeId = null; _editPortId = null; _eRiskUserEdit = false; _eFilling = false;
 }
 
 // Auto-calc for edit form (mirrors calcAuto logic)
 function eCalcAuto() {
+  if (_eFilling) return; // ข้ามถ้ากำลัง fill ข้อมูลจาก trade
   const entry  = parseFloat(document.getElementById('eFEntry').value);
   const target = parseFloat(document.getElementById('eFTarget').value);
   const sl     = parseFloat(document.getElementById('eFSL').value);
