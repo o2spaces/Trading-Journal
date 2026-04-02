@@ -2541,13 +2541,16 @@ async function generateShareLink() {
   if (!port) return;
 
   btn.disabled = true;
-  btn.textContent = '⏳ กำลังสร้าง...';
 
   const trades  = allTrades[portId] || [];
   const payload = JSON.stringify({ port, trades });
+  const base    = location.href.split('?')[0].split('#')[0];
 
-  // ── ถ้ามี SCRIPT_URL → บันทึกใน Google Sheet ได้ short link
+  // ── Step 1: สร้าง long URL (GAS short ID หรือ base64)
+  let longUrl = '';
+
   if (SCRIPT_URL) {
+    btn.textContent = '⏳ บันทึกข้อมูล...';
     try {
       const res  = await fetch(SCRIPT_URL, {
         method: 'POST',
@@ -2556,22 +2559,37 @@ async function generateShareLink() {
       });
       const data = await res.json();
       if (data.success && data.id) {
-        const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id;
-        showShareUrl(url);
-        return;
+        longUrl = base + '?s=' + data.id;
       }
-    } catch(e) { /* fallback below */ }
+    } catch(e) { /* fall through */ }
   }
 
-  // ── Fallback: encode ลงใน URL (ไม่ต้องใช้ GAS)
-  try {
-    const b64 = btoa(unescape(encodeURIComponent(payload)));
-    const url = location.href.split('?')[0].split('#')[0] + '#share=' + b64;
-    showShareUrl(url);
-  } catch(e) {
-    btn.textContent = '❌ ข้อมูลใหญ่เกินไป';
-    btn.disabled = false;
+  if (!longUrl) {
+    try {
+      const b64 = btoa(unescape(encodeURIComponent(payload)));
+      longUrl = base + '#share=' + b64;
+    } catch(e) {
+      btn.textContent = '❌ ข้อมูลใหญ่เกินไป';
+      btn.disabled = false;
+      return;
+    }
   }
+
+  // ── Step 2: ย่อด้วย TinyURL
+  btn.textContent = '✂️ กำลังย่อ Link...';
+  try {
+    const tiny = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
+    if (tiny.ok) {
+      const shortUrl = await tiny.text();
+      if (shortUrl.startsWith('https://tinyurl.com/')) {
+        showShareUrl(shortUrl);
+        return;
+      }
+    }
+  } catch(e) { /* TinyURL unreachable */ }
+
+  // ── Step 3: ถ้า TinyURL ไม่ได้ → ใช้ long URL เลย
+  showShareUrl(longUrl);
 }
 
 function showShareUrl(url) {
