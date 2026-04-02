@@ -2707,7 +2707,11 @@ function applySharedPayload(jsonStr) {
     if (shareBtnH) shareBtnH.style.display = 'none';
     document.getElementById('viewOnlyBanner').classList.add('show');
     isViewOnly = true;
-    // ซ่อนปุ่ม + เพิ่มพอร์ตใน tab bar ทันที
+    // ซ่อน port bar ทั้งหมดใน share view (มีแค่พอร์ตเดียว ไม่จำเป็น)
+    const portBar = document.getElementById('portBar');
+    if (portBar) portBar.style.display = 'none';
+    const portLabelBar = document.querySelector('.port-label-bar');
+    if (portLabelBar) portLabelBar.style.display = 'none';
     document.querySelectorAll('.port-tab-add').forEach(b => b.style.display = 'none');
     return true;
   } catch(e) { return false; }
