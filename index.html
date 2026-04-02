@@ -2530,6 +2530,7 @@ function openShareModal() {
   document.getElementById('shareGenBtn').style.display = 'block';
   document.getElementById('shareGenBtn').textContent = '🔗 สร้าง Link';
   document.getElementById('shareGenBtn').disabled = false;
+  document.getElementById('shareErrBox').style.display = 'none';
   document.getElementById('shareOverlay').classList.add('show');
 }
 function closeShareModal() { document.getElementById('shareOverlay').classList.remove('show'); }
@@ -2540,56 +2541,41 @@ async function generateShareLink() {
   const port   = portfolios.find(p => p.id === portId);
   if (!port) return;
 
+  if (!SCRIPT_URL) {
+    toast('⚠️ กรุณาตั้งค่า Google Apps Script URL ใน Settings ก่อน', 'error');
+    btn.disabled = false;
+    btn.textContent = '🔗 สร้าง Link';
+    document.getElementById('shareErrBox').textContent = '❌ ยังไม่ได้ตั้งค่า Script URL — ไปที่ ＋ Add Trade / Settings → Settings แล้วกรอก URL';
+    document.getElementById('shareErrBox').style.display = 'block';
+    return;
+  }
+
   btn.disabled = true;
+  btn.textContent = '⏳ กำลังสร้าง Link...';
+  document.getElementById('shareErrBox').style.display = 'none';
 
   const trades  = allTrades[portId] || [];
   const payload = JSON.stringify({ port, trades });
-  const base    = location.href.split('?')[0].split('#')[0];
 
-  // ── Step 1: สร้าง long URL (GAS short ID หรือ base64)
-  let longUrl = '';
-
-  if (SCRIPT_URL) {
-    btn.textContent = '⏳ บันทึกข้อมูล...';
-    try {
-      const res  = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'saveShare', payload })
-      });
-      const data = await res.json();
-      if (data.success && data.id) {
-        longUrl = base + '?s=' + data.id;
-      }
-    } catch(e) { /* fall through */ }
-  }
-
-  if (!longUrl) {
-    try {
-      const b64 = btoa(unescape(encodeURIComponent(payload)));
-      longUrl = base + '#share=' + b64;
-    } catch(e) {
-      btn.textContent = '❌ ข้อมูลใหญ่เกินไป';
-      btn.disabled = false;
+  try {
+    const res  = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'saveShare', payload })
+    });
+    const data = await res.json();
+    if (data.success && data.id) {
+      const url = location.href.split('?')[0].split('#')[0] + '?s=' + data.id;
+      showShareUrl(url);
       return;
     }
+    throw new Error(data.error || 'GAS ไม่ตอบกลับ success');
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🔗 ลองใหม่';
+    document.getElementById('shareErrBox').textContent = '❌ สร้าง Link ไม่ได้: ' + e.message + ' — กรุณา Re-deploy Google Apps Script ใหม่ (New Deployment)';
+    document.getElementById('shareErrBox').style.display = 'block';
   }
-
-  // ── Step 2: ย่อด้วย TinyURL
-  btn.textContent = '✂️ กำลังย่อ Link...';
-  try {
-    const tiny = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
-    if (tiny.ok) {
-      const shortUrl = await tiny.text();
-      if (shortUrl.startsWith('https://tinyurl.com/')) {
-        showShareUrl(shortUrl);
-        return;
-      }
-    }
-  } catch(e) { /* TinyURL unreachable */ }
-
-  // ── Step 3: ถ้า TinyURL ไม่ได้ → ใช้ long URL เลย
-  showShareUrl(longUrl);
 }
 
 function showShareUrl(url) {
@@ -2703,6 +2689,8 @@ function applySharedPayload(jsonStr) {
       </div>
       <!-- Generate button (shown first) -->
       <button class="share-copy-btn" id="shareGenBtn" onclick="generateShareLink()">🔗 สร้าง Link</button>
+      <!-- Error box -->
+      <div id="shareErrBox" style="display:none;margin-top:10px;background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--red);line-height:1.6;"></div>
       <!-- URL box + copy (hidden until generated) -->
       <div class="share-url-box" id="shareUrlBox" style="display:none;"></div>
       <button class="share-copy-btn" id="shareCopyBtn" onclick="copyShareLink()" style="display:none;">📋 คัดลอก Link</button>
@@ -2710,7 +2698,7 @@ function applySharedPayload(jsonStr) {
         <span style="font-size:16px;flex-shrink:0;">ℹ️</span>
         <div>
           <span>ผู้รับจะเห็น Dashboard แบบ <strong style="color:var(--cyan);">View-Only</strong> ไม่สามารถแก้ไขได้</span><br>
-          <span style="color:var(--muted);font-size:10px;margin-top:3px;display:block;">🔗 Link สั้น ต้องตั้งค่า Google Apps Script URL ก่อน · ถ้าไม่มีจะใช้ Link แบบ encode แทน</span>
+          <span style="color:var(--muted);font-size:10px;margin-top:3px;display:block;">⚠️ ต้องตั้งค่า Script URL และ <strong>Re-deploy Google Apps Script ใหม่</strong> (New Deployment) ก่อนใช้งาน</span>
         </div>
       </div>
     </div>
