@@ -3013,8 +3013,23 @@ function openEditTrade(tradeId) {
   setSel('eFAsset',    t.asset);
   setVal('eFDuration', t.duration || '');
   // ✅ Time Entry / Exited — fill ตรงๆ ไม่ผ่าน eCalcAuto
-  setVal('eFTimeEntry',  t.timeEntry  || '');
-  setVal('eFTimeExited', t.timeExited || '');
+  // parseTimeVal: แปลงค่าจาก Sheet ให้เป็น "HH:MM" สำหรับ <input type="time">
+  // รองรับ: "07:00", "07:00:00", ISO string "1899-12-30T07:00:00.000Z", Date object
+  const parseTimeVal = (v) => {
+    if (!v) return '';
+    if (typeof v === 'string') {
+      const iso = v.match(/T(\d{2}):(\d{2})/);
+      if (iso) return iso[1] + ':' + iso[2];
+      const plain = v.match(/^(\d{1,2}):(\d{2})/);
+      if (plain) return plain[1].padStart(2,'0') + ':' + plain[2];
+    }
+    if (v instanceof Date) {
+      return String(v.getHours()).padStart(2,'0') + ':' + String(v.getMinutes()).padStart(2,'0');
+    }
+    return String(v);
+  };
+  setVal('eFTimeEntry',  parseTimeVal(t.timeEntry));
+  setVal('eFTimeExited', parseTimeVal(t.timeExited));
   // ✅ Classification
   setSel('eFCode',  t.code);
   setSel('eFClass', t.cls);

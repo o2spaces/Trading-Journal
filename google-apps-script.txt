@@ -1,10 +1,12 @@
 // ============================================================
-// NINJA TRADING JOURNAL — Google Apps Script Backend v2.4
+// NINJA TRADING JOURNAL — Google Apps Script Backend v2.5
 // รองรับหลายพอร์ต โดยแต่ละพอร์ตอยู่ใน Sheet แยกกัน
 // v2.1: เพิ่ม SL Distance (col R) และ Lots (col S)
 // v2.2: เพิ่ม Asset (col F) หลัง Time Slot
 // v2.3: เพิ่ม Time Exited (col I) หลัง Time Entry
 // v2.4: เพิ่ม Commission ($) (col V) — Topstep commission per order
+// v2.5: FIX updateTrade — recalculate ALL rows ที่ได้รับผลกระทบ
+//       (Balance, ConLoss, SumConLoss, SumDDLoss, DD%, TP%)
 //
 // วิธี Deploy:
 //   1. เปิด Google Sheets → Extensions → Apps Script
@@ -51,7 +53,7 @@ const HEADERS = [
   'Risk ($)',       // S  19
   'SL Distance',    // T  20
   'Lots',           // U  21
-  'Commission ($)', // V  22  ← NEW v2.4
+  'Commission ($)', // V  22
   'Max RR',         // W  23
   'Position',       // X  24  ← Auto
   'Point',          // Y  25  ← Auto
@@ -110,39 +112,39 @@ function handleGetTrades(sheetName) {
     day         : row[2]  || '',
     session     : row[3]  || '',
     timeSlot    : row[4]  || '',
-    asset       : row[5]  || '',   // F: Asset
-    duration    : +row[6] || 0,    // G
-    timeEntry   : row[7]  || '',   // H
-    timeExited  : row[8]  || '',   // I ← NEW
-    code        : row[9]  || '',   // J
-    cls         : row[10] || '',   // K
-    mode        : row[11] || '',   // L
-    model       : row[12] || '',   // M
-    zone        : row[13] || '',   // N
-    priceEntry  : +row[14]|| 0,    // O
-    priceTarget : +row[15]|| 0,    // P
-    priceSL     : +row[16]|| 0,    // Q
-    result      : row[17] || '',   // R
-    risk        : +row[18]|| 0,    // S
-    slPoints    : +row[19]|| 0,    // T: SL Distance
-    lots        : +row[20]|| 0,    // U: Lots
-    commission  : +row[21]|| 0,    // V: Commission ($) ← NEW v2.4
-    maxRR       : +row[22]|| 0,    // W: Max RR
-    position    : row[23] || '',   // X: Position
-    point       : +row[24]|| 0,    // Y
-    rr          : +row[25]|| 0,    // Z
-    pnl         : +row[26]|| 0,    // AA
-    tp_dollar   : +row[27]|| 0,    // AB
-    sl_dollar   : +row[28]|| 0,    // AC
-    tpPct       : row[29] || '',   // AD
-    ddPct       : row[30] || '',   // AE
-    conLoss     : +row[31]|| 0,    // AF
-    sumConLoss  : +row[32]|| 0,    // AG
-    sumDDLoss   : +row[33]|| 0,    // AH
-    balance     : +row[34]|| 0,    // AI
-    pictureUrl  : row[35] || '',   // AJ
-    tip         : row[36] || '',   // AK
-    createdAt   : row[37] || ''    // AL
+    asset       : row[5]  || '',
+    duration    : +row[6] || 0,
+    timeEntry   : row[7]  ? formatTime(row[7])  : '',
+    timeExited  : row[8]  ? formatTime(row[8])  : '',
+    code        : row[9]  || '',
+    cls         : row[10] || '',
+    mode        : row[11] || '',
+    model       : row[12] || '',
+    zone        : row[13] || '',
+    priceEntry  : +row[14]|| 0,
+    priceTarget : +row[15]|| 0,
+    priceSL     : +row[16]|| 0,
+    result      : row[17] || '',
+    risk        : +row[18]|| 0,
+    slPoints    : +row[19]|| 0,
+    lots        : +row[20]|| 0,
+    commission  : +row[21]|| 0,
+    maxRR       : +row[22]|| 0,
+    position    : row[23] || '',
+    point       : +row[24]|| 0,
+    rr          : +row[25]|| 0,
+    pnl         : +row[26]|| 0,
+    tp_dollar   : +row[27]|| 0,
+    sl_dollar   : +row[28]|| 0,
+    tpPct       : row[29] || '',
+    ddPct       : row[30] || '',
+    conLoss     : +row[31]|| 0,
+    sumConLoss  : +row[32]|| 0,
+    sumDDLoss   : +row[33]|| 0,
+    balance     : +row[34]|| 0,
+    pictureUrl  : row[35] || '',
+    tip         : row[36] || '',
+    createdAt   : row[37] || ''
   }));
 
   return respond({ success: true, trades });
@@ -192,13 +194,14 @@ function handleAddTrade(trade, sheetName) {
     if (note && !isNaN(parseFloat(note))) initBalance = parseFloat(note);
   } catch(e) {}
 
-  // PnL = col AA (index 26)
+  // Balance running
   let runBal = initBalance;
   dataRows.forEach(r => { runBal += parseFloat(r[26]) || 0; });
   const newBalance = runBal + pnl;
 
   const tpPct = initBalance > 0 && pnl !== 0 ? (pnl / initBalance * 100).toFixed(2) + '%' : '—';
 
+  // DD%
   let peak2 = initBalance, runBal2 = initBalance;
   dataRows.forEach(r => {
     runBal2 += parseFloat(r[26]) || 0;
@@ -208,7 +211,7 @@ function handleAddTrade(trade, sheetName) {
   if (runBal2 > peak2) peak2 = runBal2;
   const ddPct = peak2 > 0 ? ((peak2 - runBal2) / peak2 * 100).toFixed(2) + '%' : '0%';
 
-  // Result = col R (index 17), PnL = col AA (index 26)
+  // ConLoss streak
   let conLossStreak = 0, sumConLoss = 0;
   for (let i = dataRows.length - 1; i >= 0; i--) {
     if (dataRows[i][17] === 'Loss') {
@@ -229,107 +232,77 @@ function handleAddTrade(trade, sheetName) {
   if (pnl < 0) sumDDLoss += Math.abs(pnl);
 
   let tradeDate = now;
-if (trade.date) {
-  const parts = trade.date.split('-');
-  if (parts.length === 3) {
-    tradeDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
-  } else {
-    tradeDate = new Date(trade.date);
+  if (trade.date) {
+    const parts = trade.date.split('-');
+    if (parts.length === 3) {
+      tradeDate = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    } else {
+      tradeDate = new Date(trade.date);
+    }
   }
-}
+
   sheet.appendRow([
-    id,                    // A:  ID
-    tradeDate,             // B:  Date
-    trade.day        || '',// C:  Day
-    trade.session    || '',// D:  Session
-    trade.timeSlot   || '',// E:  Time Slot
-    asset,                 // F:  Asset
-    trade.duration   || 0, // G:  Duration
-    trade.timeEntry  || '',// H:  Time Entry
-    trade.timeExited || '',// I:  Time Exited
-    trade.code       || '',// J:  Code
-    trade.cls        || '',// K:  Class
-    trade.mode       || '',// L:  Mode
-    trade.model      || '',// M:  Model
-    trade.zone       || '',// N:  Zone
-    entry,                 // O:  Entry
-    target,                // P:  Target
-    sl,                    // Q:  Stop Loss
-    result,                // R:  Result
-    risk,                  // S:  Risk ($)
-    slDist,                // T:  SL Distance
-    lots,                  // U:  Lots
-    parseFloat(commission.toFixed(2)),     // V:  Commission ($) ← NEW v2.4
-    trade.maxRR      || 0, // W:  Max RR
-    position,              // X:  Position ← Auto
-    parseFloat(point.toFixed(4)),          // Y:  Point ← Auto
-    parseFloat(rr.toFixed(4)),             // Z:  RR ← Auto
-    parseFloat(pnl.toFixed(2)),            // AA: PnL ($) ← Auto
-    parseFloat(tp_dollar.toFixed(2)),      // AB: TP ($) ← Auto
-    parseFloat(sl_dollar.toFixed(2)),      // AC: SL ($) ← Auto
-    tpPct,                                 // AD: TP% ← Auto
-    ddPct,                                 // AE: DD Loss% ← Auto
-    conLossStreak,                         // AF: Con Loss ← Auto
-    parseFloat(sumConLoss.toFixed(2)),     // AG: Sum Con Loss$ ← Auto
-    parseFloat(sumDDLoss.toFixed(2)),      // AH: Sum DD Loss$ ← Auto
-    parseFloat(newBalance.toFixed(2)),     // AI: Balance ← Auto
-    trade.pictureUrl || '',                // AJ: Picture URL
-    trade.tip        || '',                // AK: Tip / Note
-    now                                    // AL: Created At
+    id,
+    tradeDate,
+    trade.day        || '',
+    trade.session    || '',
+    trade.timeSlot   || '',
+    asset,
+    trade.duration   || 0,
+    trade.timeEntry  || '',
+    trade.timeExited || '',
+    trade.code       || '',
+    trade.cls        || '',
+    trade.mode       || '',
+    trade.model      || '',
+    trade.zone       || '',
+    entry,
+    target,
+    sl,
+    result,
+    risk,
+    slDist,
+    lots,
+    parseFloat(commission.toFixed(2)),
+    trade.maxRR      || 0,
+    position,
+    parseFloat(point.toFixed(4)),
+    parseFloat(rr.toFixed(4)),
+    parseFloat(pnl.toFixed(2)),
+    parseFloat(tp_dollar.toFixed(2)),
+    parseFloat(sl_dollar.toFixed(2)),
+    tpPct,
+    ddPct,
+    conLossStreak,
+    parseFloat(sumConLoss.toFixed(2)),
+    parseFloat(sumDDLoss.toFixed(2)),
+    parseFloat(newBalance.toFixed(2)),
+    trade.pictureUrl || '',
+    trade.tip        || '',
+    now
   ]);
 
-  // ── Formatting ──
   const lr = sheet.getLastRow();
-
-  // Date (B = 2)
-  sheet.getRange(lr, 2).setNumberFormat('dd/mm/yyyy');
-
-  // Number cols: O/P/Q/S/T/U/V/Y/Z/AA/AB/AC/AI
-  //   O=15, P=16, Q=17, S=19, T=20, U=21, V=22, Y=25, Z=26, AA=27, AB=28, AC=29, AI=35
-  [15,16,17,19,20,21,22,25,26,27,28,29,35].forEach(col => {
-    sheet.getRange(lr, col).setNumberFormat('#,##0.00');
-  });
-
-  // Result color (R = 18)
-  const colMap = { 'TP':['#0d4f1e','#3fb950'], 'Loss':['#4f0d0d','#f85149'], 'Miss':['#3a3a0d','#ffd166'] };
-  const resultCell = sheet.getRange(lr, 18);
-  if (colMap[result]) resultCell.setBackground(colMap[result][0]).setFontColor(colMap[result][1]);
-
-  // PnL color (AA = 27)
-  const pnlCell = sheet.getRange(lr, 27);
-  if (pnl > 0) pnlCell.setFontColor('#3fb950');
-  else if (pnl < 0) pnlCell.setFontColor('#f85149');
-
-  // Commission color (V = 22) — always red if > 0
-  if (commission > 0) sheet.getRange(lr, 22).setFontColor('#f85149');
-
-  // Position color (X = 24)
-  const posCell = sheet.getRange(lr, 24);
-  if (position === 'Buy')  posCell.setFontColor('#3fb950');
-  if (position === 'Sell') posCell.setFontColor('#f85149');
-
-  // Asset color (F = 6)
-  sheet.getRange(lr, 6).setFontColor('#39d0d8');
-
-  // Auto columns background (X..AI = col 24..35)
-  sheet.getRange(lr, 24, 1, 12).setBackground('#0d1a1a');
+  applyRowFormatting(sheet, lr, result, pnl, commission, position);
 
   return respond({ success: true, id });
 }
 
 // ─── UPDATE TRADE ────────────────────────────────────────────
+// v2.5 FIX: อัพเดท row ที่แก้ไข แล้ว recalculate ทุก row ที่อยู่หลัง
 function handleUpdateTrade(trade, sheetName) {
   if (!trade || !trade.id) return respond({ success: false, error: 'ไม่มี trade.id' });
   const sheet = getOrCreateSheet(sheetName);
   const data  = sheet.getDataRange().getValues();
 
-  // หา row ที่ตรงกับ id (col A = index 0)
-  let rowNum = -1;
+  // หา row ที่ตรงกับ id
+  let targetRowNum = -1;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(trade.id)) { rowNum = i + 1; break; }
+    if (String(data[i][0]) === String(trade.id)) { targetRowNum = i + 1; break; }
   }
-  if (rowNum === -1) return respond({ success: false, error: 'ไม่พบ Trade id: ' + trade.id });
+  if (targetRowNum === -1) return respond({ success: false, error: 'ไม่พบ Trade id: ' + trade.id });
 
+  // คำนวณค่าของ row ที่แก้ไข
   const entry    = parseFloat(trade.priceEntry)  || 0;
   const target   = parseFloat(trade.priceTarget) || 0;
   const sl       = parseFloat(trade.priceSL)     || 0;
@@ -348,94 +321,160 @@ function handleUpdateTrade(trade, sheetName) {
   const tp_dollar = result === 'TP'   ? pnl : 0;
   const sl_dollar = result === 'Loss' ? pnl : 0;
 
-  // คำนวณ running stats ใหม่ (ไม่รวม row นี้)
-  let initBalance = 10000;
-  try { const note = sheet.getRange('A1').getNote(); if (note && !isNaN(parseFloat(note))) initBalance = parseFloat(note); } catch(e) {}
-
-  const dataRows = data.slice(1);
-  let runBal = initBalance, peak2 = initBalance, runBal2 = initBalance;
-  let conLossStreak = 0, sumConLoss = 0, sumDDLoss = 0;
-
-  dataRows.forEach((r, i) => {
-    if (i + 2 === rowNum) return; // ข้าม row ที่กำลัง update
-    const p = parseFloat(r[26]) || 0; // AA = index 26
-    runBal  += p;
-    runBal2 += p;
-    if (runBal2 > peak2) peak2 = runBal2;
-    if (p < 0) sumDDLoss += Math.abs(p);
-  });
-
-  runBal2 += pnl;
-  if (runBal2 > peak2) peak2 = runBal2;
-  const newBalance = runBal + pnl;
-  const ddPct = peak2 > 0 ? ((peak2 - runBal2) / peak2 * 100).toFixed(2) + '%' : '0%';
-  const tpPct = initBalance > 0 && pnl !== 0 ? (pnl / initBalance * 100).toFixed(2) + '%' : '—';
-  if (pnl < 0) sumDDLoss += Math.abs(pnl);
-
   let tradeDate = new Date();
   if (trade.date) {
     const parts = trade.date.split('-');
     tradeDate = parts.length === 3 ? new Date(+parts[0], +parts[1]-1, +parts[2]) : new Date(trade.date);
   }
 
-  // เขียนทับ row เดิม (ยกเว้น col A: ID และ col AL: Created At)
-  const rowValues = [
-    data[rowNum-1][0],              // A: ID (คงเดิม)
-    tradeDate,                      // B: Date
-    trade.day        || '',         // C
-    trade.session    || '',         // D
-    trade.timeSlot   || '',         // E
-    asset,                          // F
-    trade.duration   || 0,          // G
-    trade.timeEntry  || '',         // H
-    trade.timeExited || '',         // I
-    trade.code       || '',         // J
-    trade.cls        || '',         // K
-    trade.mode       || '',         // L
-    trade.model      || '',         // M
-    trade.zone       || '',         // N
-    entry,                          // O
-    target,                         // P
-    sl,                             // Q
-    result,                         // R
-    risk,                           // S
-    slDist,                         // T
-    lots,                           // U
+  // เขียน row ที่แก้ไข (ยกเว้น col A: ID และ col AL: Created At)
+  // ยังไม่ใส่ค่า auto-calc (จะคำนวณใหม่ใน recalculateAllRows)
+  const updatedRow = [
+    data[targetRowNum-1][0],         // A: ID คงเดิม
+    tradeDate,                       // B
+    trade.day        || '',          // C
+    trade.session    || '',          // D
+    trade.timeSlot   || '',          // E
+    asset,                           // F
+    trade.duration   || 0,           // G
+    trade.timeEntry  || '',          // H
+    trade.timeExited || '',          // I
+    trade.code       || '',          // J
+    trade.cls        || '',          // K
+    trade.mode       || '',          // L
+    trade.model      || '',          // M
+    trade.zone       || '',          // N
+    entry,                           // O
+    target,                          // P
+    sl,                              // Q
+    result,                          // R
+    risk,                            // S
+    slDist,                          // T
+    lots,                            // U
     parseFloat(commission.toFixed(2)), // V
-    trade.maxRR      || 0,          // W
-    position,                       // X (Auto)
-    parseFloat(point.toFixed(4)),   // Y (Auto)
-    parseFloat(rr.toFixed(4)),      // Z (Auto)
-    parseFloat(pnl.toFixed(2)),     // AA (Auto)
-    parseFloat(tp_dollar.toFixed(2)), // AB (Auto)
-    parseFloat(sl_dollar.toFixed(2)), // AC (Auto)
-    tpPct,                          // AD (Auto)
-    ddPct,                          // AE (Auto)
-    conLossStreak,                  // AF (Auto)
-    parseFloat(sumConLoss.toFixed(2)), // AG (Auto)
-    parseFloat(sumDDLoss.toFixed(2)), // AH (Auto)
-    parseFloat(newBalance.toFixed(2)), // AI (Auto)
-    trade.pictureUrl || '',         // AJ
-    trade.tip        || '',         // AK
-    data[rowNum-1][37] || new Date() // AL: Created At (คงเดิม)
+    trade.maxRR      || 0,           // W
+    position,                        // X (Auto — จะ recalc)
+    parseFloat(point.toFixed(4)),    // Y (Auto — จะ recalc)
+    parseFloat(rr.toFixed(4)),       // Z (Auto — จะ recalc)
+    parseFloat(pnl.toFixed(2)),      // AA (Auto — จะ recalc)
+    parseFloat(tp_dollar.toFixed(2)),// AB (Auto — จะ recalc)
+    parseFloat(sl_dollar.toFixed(2)),// AC (Auto — จะ recalc)
+    '—',                             // AD placeholder
+    '0%',                            // AE placeholder
+    0,                               // AF placeholder
+    0,                               // AG placeholder
+    0,                               // AH placeholder
+    0,                               // AI placeholder
+    trade.pictureUrl || '',          // AJ
+    trade.tip        || '',          // AK
+    data[targetRowNum-1][37] || new Date() // AL: Created At คงเดิม
   ];
 
-  sheet.getRange(rowNum, 1, 1, TOTAL_COLS).setValues([rowValues]);
+  sheet.getRange(targetRowNum, 1, 1, TOTAL_COLS).setValues([updatedRow]);
 
-  // Reformat
-  sheet.getRange(rowNum, 2).setNumberFormat('dd/mm/yyyy');
-  [15,16,17,19,20,21,22,25,26,27,28,29,35].forEach(col => sheet.getRange(rowNum, col).setNumberFormat('#,##0.00'));
-  const colMap = { 'TP':['#0d4f1e','#3fb950'], 'Loss':['#4f0d0d','#f85149'], 'Miss':['#3a3a0d','#ffd166'] };
-  if (colMap[result]) sheet.getRange(rowNum, 18).setBackground(colMap[result][0]).setFontColor(colMap[result][1]);
-  const pnlCell = sheet.getRange(rowNum, 27);
-  if (pnl > 0) pnlCell.setFontColor('#3fb950'); else if (pnl < 0) pnlCell.setFontColor('#f85149');
-  if (commission > 0) sheet.getRange(rowNum, 22).setFontColor('#f85149');
-  const posCell = sheet.getRange(rowNum, 24);
-  if (position === 'Buy') posCell.setFontColor('#3fb950'); else if (position === 'Sell') posCell.setFontColor('#f85149');
-  sheet.getRange(rowNum, 6).setFontColor('#39d0d8');
-  sheet.getRange(rowNum, 24, 1, 12).setBackground('#0d1a1a');
+  // ── Recalculate ALL rows ตั้งแต่ต้นใหม่ ──────────────────────────
+  recalculateAllRows(sheet);
 
   return respond({ success: true });
+}
+
+// ─── RECALCULATE ALL ROWS ────────────────────────────────────
+// คำนวณ Balance, ConLoss, SumConLoss, SumDDLoss, DD%, TP%
+// ของทุก row ใหม่ตามลำดับ (ใช้หลัง add/update/delete)
+function recalculateAllRows(sheet) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return;
+
+  let initBalance = 10000;
+  try {
+    const note = sheet.getRange('A1').getNote();
+    if (note && !isNaN(parseFloat(note))) initBalance = parseFloat(note);
+  } catch(e) {}
+
+  const dataRows = data.slice(1);
+  const totalRows = dataRows.length;
+
+  let runBal = initBalance;
+  let peak   = initBalance;
+  let conLossStreak = 0;
+  let sumConLoss    = 0;
+  let sumDDLoss     = 0;
+
+  // สะสม PnL ของทุก row ก่อนหน้า เพื่อคำนวณ Balance ใหม่
+  // เราจะ recalc PnL ของแต่ละ row ก่อน (เผื่อมีการเปลี่ยน risk/result/rr)
+  const recalcPnl = dataRows.map(r => {
+    const res    = r[17] || '';   // R: Result
+    const riskR  = parseFloat(r[18]) || 0; // S: Risk($)
+    const rrR    = parseFloat(r[25]) || 0; // Z: RR
+    return res === 'TP'   ?  riskR * rrR
+         : res === 'Loss' ? -riskR
+         : 0;
+  });
+
+  for (let i = 0; i < totalRows; i++) {
+    const rowNum = i + 2; // sheet row number (1-indexed, row 1 = header)
+    const r      = dataRows[i];
+
+    const pnl       = recalcPnl[i];
+    const result    = r[17] || '';
+    const riskR     = parseFloat(r[18]) || 0;
+    const rrR       = parseFloat(r[25]) || 0;
+    const tp_dollar = result === 'TP'   ? pnl : 0;
+    const sl_dollar = result === 'Loss' ? pnl : 0;
+
+    // Balance
+    const newBalance = runBal + pnl;
+
+    // TP%
+    const tpPct = initBalance > 0 && pnl !== 0
+      ? (pnl / initBalance * 100).toFixed(2) + '%'
+      : '—';
+
+    // DD%
+    const curBal = runBal + pnl;
+    if (curBal > peak) peak = curBal;
+    const ddPct = peak > 0 ? ((peak - curBal) / peak * 100).toFixed(2) + '%' : '0%';
+
+    // ConLoss streak
+    if (result === 'Loss') {
+      conLossStreak++;
+      sumConLoss += Math.abs(pnl);
+    } else {
+      conLossStreak = 0;
+      sumConLoss    = 0;
+    }
+
+    // SumDDLoss (cumulative all losses)
+    if (pnl < 0) sumDDLoss += Math.abs(pnl);
+
+    // เขียนกลับ Auto columns (X=24, Y=25, Z=26, AA=27, AB=28, AC=29, AD=30, AE=31, AF=32, AG=33, AH=34, AI=35)
+    // col indices เป็น 1-based
+    const autoValues = [[
+      r[23],                                   // X: Position (ไม่เปลี่ยน)
+      r[24],                                   // Y: Point (ไม่เปลี่ยน)
+      r[25],                                   // Z: RR (ไม่เปลี่ยน)
+      parseFloat(pnl.toFixed(2)),              // AA: PnL ($)
+      parseFloat(tp_dollar.toFixed(2)),        // AB: TP ($)
+      parseFloat(sl_dollar.toFixed(2)),        // AC: SL ($)
+      tpPct,                                   // AD: TP%
+      ddPct,                                   // AE: DD Loss%
+      conLossStreak,                           // AF: Con Loss
+      parseFloat(sumConLoss.toFixed(2)),       // AG: Sum Con Loss$
+      parseFloat(sumDDLoss.toFixed(2)),        // AH: Sum DD Loss$
+      parseFloat(newBalance.toFixed(2))        // AI: Balance
+    ]];
+
+    // เขียน col 24–35 (12 cols)
+    sheet.getRange(rowNum, 24, 1, 12).setValues(autoValues);
+
+    // Formatting
+    const pnlCell = sheet.getRange(rowNum, 27);
+    if (pnl > 0)      pnlCell.setFontColor('#3fb950');
+    else if (pnl < 0) pnlCell.setFontColor('#f85149');
+    else              pnlCell.setFontColor('#dce8f5');
+
+    runBal = newBalance;
+  }
 }
 
 // ─── DELETE TRADE ────────────────────────────────────────────
@@ -449,6 +488,10 @@ function handleDeleteTrade(tradeId, sheetName) {
   }
   if (rowNum === -1) return respond({ success: true, note: 'ไม่พบ row (อาจถูกลบแล้ว)' });
   sheet.deleteRow(rowNum);
+
+  // ── Recalculate ทุก row หลังจาก delete ──
+  recalculateAllRows(sheet);
+
   return respond({ success: true });
 }
 
@@ -477,7 +520,6 @@ function handleSaveShare(payload) {
     sh.hideSheet();
     sh.getRange(1,1,1,3).setValues([['ID','CreatedAt','Payload']]);
   }
-  // Generate 8-char alphanumeric ID
   const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
   let id = '';
   for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
@@ -498,6 +540,30 @@ function handleGetShare(id) {
   return respond({ success: false, error: 'Share not found' });
 }
 
+// ─── APPLY ROW FORMATTING ────────────────────────────────────
+function applyRowFormatting(sheet, rowNum, result, pnl, commission, position) {
+  sheet.getRange(rowNum, 2).setNumberFormat('dd/mm/yyyy');
+  [15,16,17,19,20,21,22,25,26,27,28,29,35].forEach(col => {
+    sheet.getRange(rowNum, col).setNumberFormat('#,##0.00');
+  });
+
+  const colMap = { 'TP':['#0d4f1e','#3fb950'], 'Loss':['#4f0d0d','#f85149'], 'Miss':['#3a3a0d','#ffd166'] };
+  if (colMap[result]) sheet.getRange(rowNum, 18).setBackground(colMap[result][0]).setFontColor(colMap[result][1]);
+
+  const pnlCell = sheet.getRange(rowNum, 27);
+  if (pnl > 0)      pnlCell.setFontColor('#3fb950');
+  else if (pnl < 0) pnlCell.setFontColor('#f85149');
+
+  if (commission > 0) sheet.getRange(rowNum, 22).setFontColor('#f85149');
+
+  const posCell = sheet.getRange(rowNum, 24);
+  if (position === 'Buy')  posCell.setFontColor('#3fb950');
+  if (position === 'Sell') posCell.setFontColor('#f85149');
+
+  sheet.getRange(rowNum, 6).setFontColor('#39d0d8');
+  sheet.getRange(rowNum, 24, 1, 12).setBackground('#0d1a1a');
+}
+
 // ─── GET / CREATE SHEET ──────────────────────────────────────
 function getOrCreateSheet(name) {
   const ss        = SpreadsheetApp.getActiveSpreadsheet();
@@ -515,52 +581,16 @@ function getOrCreateSheet(name) {
        .setFontSize(11)
        .setHorizontalAlignment('center');
 
-    // Input (A–W = col 1–23): blue-grey
-    sheet.getRange(1, 1, 1, 23).setBackground('#141e2e').setFontColor('#7ab0e0');
-    // Auto (X–AI = col 24–35): green-grey
+    sheet.getRange(1, 1,  1, 23).setBackground('#141e2e').setFontColor('#7ab0e0');
     sheet.getRange(1, 24, 1, 12).setBackground('#0d2010').setFontColor('#5fd97e');
-    // Other (AJ–AL = col 36–38): yellow-grey
-    sheet.getRange(1, 36, 1, 3).setBackground('#1e1e14').setFontColor('#d4c060');
+    sheet.getRange(1, 36, 1, 3) .setBackground('#1e1e14').setFontColor('#d4c060');
 
     const widths = [
-      220, // A:  ID
-      100, // B:  Date
-      60,  // C:  Day
-      70,  // D:  Session
-      110, // E:  Time Slot
-      80,  // F:  Asset
-      80,  // G:  Duration
-      80,  // H:  Time Entry
-      80,  // I:  Time Exited
-      70,  // J:  Code
-      60,  // K:  Class
-      220, // L:  Mode
-      70,  // M:  Model
-      100, // N:  Zone
-      90,  // O:  Entry
-      90,  // P:  Target
-      90,  // Q:  Stop Loss
-      70,  // R:  Result
-      80,  // S:  Risk ($)
-      90,  // T:  SL Distance
-      70,  // U:  Lots
-      110, // V:  Commission ($) ← NEW v2.4
-      70,  // W:  Max RR
-      80,  // X:  Position [Auto]
-      80,  // Y:  Point [Auto]
-      70,  // Z:  RR [Auto]
-      90,  // AA: PnL [Auto]
-      90,  // AB: TP$ [Auto]
-      90,  // AC: SL$ [Auto]
-      80,  // AD: TP% [Auto]
-      80,  // AE: DD% [Auto]
-      80,  // AF: ConLoss [Auto]
-      110, // AG: SumConLoss$ [Auto]
-      110, // AH: SumDDLoss$ [Auto]
-      110, // AI: Balance [Auto]
-      200, // AJ: Picture URL
-      260, // AK: Tip / Note
-      140  // AL: Created At
+      220,100,60,70,110,80,80,80,80,
+      70,60,220,70,100,90,90,90,70,
+      80,90,70,110,70,80,80,70,90,
+      90,90,80,80,80,110,110,110,
+      200,260,140
     ];
     widths.forEach((w, i) => sheet.setColumnWidth(i + 1, w));
 
@@ -582,9 +612,30 @@ function formatDate(d) {
     d = new Date(d);
     if (isNaN(d)) return String(d);
   }
-  // ✅ ใช้ timezone ของ Spreadsheet แทน UTC
   const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   return Utilities.formatDate(d, tz, 'yyyy-MM-dd');
+}
+
+// แปลง Time value จาก Sheet → "HH:MM" string สำหรับ <input type="time">
+// รองรับ: Date object, "07:00:00", "07:00", "1899-12-30T00:00:00Z" (ISO)
+function formatTime(v) {
+  if (!v) return '';
+  // ถ้าเป็น string ธรรมดา เช่น "07:00" หรือ "07:00:00" → ดึงแค่ HH:MM
+  if (typeof v === 'string') {
+    // ISO string เช่น "1899-12-30T07:00:00.000Z"
+    const isoMatch = v.match(/T(\d{2}):(\d{2})/);
+    if (isoMatch) return isoMatch[1] + ':' + isoMatch[2];
+    // plain time "07:00:00" หรือ "07:00"
+    const tMatch = v.match(/^(\d{1,2}):(\d{2})/);
+    if (tMatch) return tMatch[1].padStart(2,'0') + ':' + tMatch[2];
+    return v;
+  }
+  // ถ้าเป็น Date object (Sheets มักส่งมาเป็น Date เวลา format เป็น Time)
+  if (v instanceof Date) {
+    const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+    return Utilities.formatDate(v, tz, 'HH:mm');
+  }
+  return String(v);
 }
 
 function respond(data) {
