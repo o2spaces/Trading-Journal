@@ -103,10 +103,34 @@ function doPost(e) {
 // ─── GET TRADES ─────────────────────────────────────────────
 function handleGetTrades(sheetName) {
   const sheet = getOrCreateSheet(sheetName);
-  const data  = sheet.getDataRange().getValues();
+  const range = sheet.getDataRange();
+  const data  = range.getValues();
   if (data.length <= 1) return respond({ success: true, trades: [] });
 
-  const trades = data.slice(1).map(row => ({
+  // ใช้ getDisplayValues สำหรับ col H (index 7) และ I (index 8)
+  // เพื่อดึงเวลาที่ Sheet แสดงจริงๆ โดยไม่มีปัญหา timezone offset
+  const display = range.getDisplayValues();
+
+  // แปลง "7:00 AM" หรือ "07:00:00" → "HH:MM" ที่ <input type="time"> รับได้
+  function toHHMM(s) {
+    if (!s) return '';
+    // รูปแบบ "H:MM AM/PM" เช่น "7:00 AM", "2:30 PM"
+    const ampm = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+    if (ampm) {
+      let h = parseInt(ampm[1]);
+      const m = ampm[2];
+      const period = ampm[3].toUpperCase();
+      if (period === 'AM' && h === 12) h = 0;
+      if (period === 'PM' && h !== 12) h += 12;
+      return String(h).padStart(2,'0') + ':' + m;
+    }
+    // รูปแบบ "HH:MM" หรือ "HH:MM:SS"
+    const hm = s.match(/^(\d{1,2}):(\d{2})/);
+    if (hm) return hm[1].padStart(2,'0') + ':' + hm[2];
+    return s;
+  }
+
+  const trades = data.slice(1).map((row, i) => ({
     id          : row[0],
     date        : row[1]  ? formatDate(row[1]) : '',
     day         : row[2]  || '',
@@ -114,8 +138,8 @@ function handleGetTrades(sheetName) {
     timeSlot    : row[4]  || '',
     asset       : row[5]  || '',
     duration    : +row[6] || 0,
-    timeEntry   : row[7]  ? formatTime(row[7])  : '',
-    timeExited  : row[8]  ? formatTime(row[8])  : '',
+    timeEntry   : toHHMM(display[i+1][7]),   // ← ดึงจาก displayValues ตรงๆ
+    timeExited  : toHHMM(display[i+1][8]),   // ← ดึงจาก displayValues ตรงๆ
     code        : row[9]  || '',
     cls         : row[10] || '',
     mode        : row[11] || '',
@@ -614,28 +638,6 @@ function formatDate(d) {
   }
   const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
   return Utilities.formatDate(d, tz, 'yyyy-MM-dd');
-}
-
-// แปลง Time value จาก Sheet → "HH:MM" string สำหรับ <input type="time">
-// รองรับ: Date object, "07:00:00", "07:00", "1899-12-30T00:00:00Z" (ISO)
-function formatTime(v) {
-  if (!v) return '';
-  // ถ้าเป็น string ธรรมดา เช่น "07:00" หรือ "07:00:00" → ดึงแค่ HH:MM
-  if (typeof v === 'string') {
-    // ISO string เช่น "1899-12-30T07:00:00.000Z"
-    const isoMatch = v.match(/T(\d{2}):(\d{2})/);
-    if (isoMatch) return isoMatch[1] + ':' + isoMatch[2];
-    // plain time "07:00:00" หรือ "07:00"
-    const tMatch = v.match(/^(\d{1,2}):(\d{2})/);
-    if (tMatch) return tMatch[1].padStart(2,'0') + ':' + tMatch[2];
-    return v;
-  }
-  // ถ้าเป็น Date object (Sheets มักส่งมาเป็น Date เวลา format เป็น Time)
-  if (v instanceof Date) {
-    const tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
-    return Utilities.formatDate(v, tz, 'HH:mm');
-  }
-  return String(v);
 }
 
 function respond(data) {
