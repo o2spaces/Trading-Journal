@@ -595,7 +595,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   transition:all 0.15s;padding:0;line-height:1;
 }
 .ts-edit-btn:hover { border-color:var(--blue); background:rgba(61,158,255,0.12); }
-.ts-del-btn:hover  { border-color:var(--red);  background:rgba(255,71,87,0.12);  }
+.ts-del-btn { filter:brightness(0) invert(1); }
+.ts-del-btn:hover  { border-color:var(--red);  background:rgba(255,71,87,0.12); filter:none; }
 
 /* ── EDIT TRADE MODAL ── */
 .edit-modal {
