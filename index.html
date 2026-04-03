@@ -2983,6 +2983,7 @@ function openEditTrade(tradeId) {
   _editTradeId   = tradeId;
   _editPortId    = portId;
   _eRiskUserEdit = false;
+  _eFilling      = true; // ✅ ต้อง set ก่อนทุก setSel/setVal เพื่อป้องกัน eCalcAuto ทับค่า
 
   // Badge
   const badge = document.getElementById('editTradeIdBadge');
@@ -2990,11 +2991,19 @@ function openEditTrade(tradeId) {
 
   // Fill all fields
   const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  // setSel: ใช้ textContent เปรียบเทียบด้วย เพื่อรองรับ > ใน Mode ที่ HTML render เป็น &gt;
   const setSel = (id, v) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const opt = [...el.options].find(o => o.value === String(v));
-    if (opt) el.value = String(v);
+    const strV = String(v ?? '');
+    // ลอง match ด้วย value ก่อน (ตรง)
+    const byVal = [...el.options].find(o => o.value === strV);
+    if (byVal) { el.value = byVal.value; return; }
+    // fallback: match ด้วย textContent (กรณี > vs &gt; หรือ entity อื่นๆ)
+    const byText = [...el.options].find(o => o.textContent.trim() === strV);
+    if (byText) { el.value = byText.value; return; }
+    // fallback สุดท้าย: เซ็ต value ตรงๆ (สำหรับค่าที่ไม่มีใน option แต่ต้องการ fallback)
+    el.value = strV;
   };
 
   setSel('eFDay',      t.day);
@@ -3003,8 +3012,10 @@ function openEditTrade(tradeId) {
   setSel('eFTimeSlot', t.timeSlot);
   setSel('eFAsset',    t.asset);
   setVal('eFDuration', t.duration || '');
+  // ✅ Time Entry / Exited — fill ตรงๆ ไม่ผ่าน eCalcAuto
   setVal('eFTimeEntry',  t.timeEntry  || '');
   setVal('eFTimeExited', t.timeExited || '');
+  // ✅ Classification
   setSel('eFCode',  t.code);
   setSel('eFClass', t.cls);
   setSel('eFMode',  t.mode);
@@ -3014,12 +3025,12 @@ function openEditTrade(tradeId) {
   setVal('eFTarget', t.priceTarget || '');
   setVal('eFSL',     t.priceSL     || '');
   setSel('eFResult', t.result);
-  setVal('eFMaxRR',   t.maxRR     || '');
+  // ✅ Max RR
+  setVal('eFMaxRR',  t.maxRR > 0 ? t.maxRR : '');
   setVal('eFPicture', t.pictureUrl || '');
   setVal('eFTip',     t.tip        || '');
 
   // ── fill ค่า calculated จากที่บันทึกไว้จริงๆ ──
-  _eFilling = true; // หยุด eCalcAuto ไม่ให้ยิงระหว่าง fill
   setVal('eFRisk', t.risk || '');
   _eRiskUserEdit = true; // ล็อคไม่ให้ eCalcAuto ทับค่า risk ที่ดึงมา
 
