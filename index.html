@@ -1758,7 +1758,12 @@ function renderDash(portId) {
   const closed = trades.filter(t => t.result === 'TP' || t.result === 'Loss');
   const wins   = closed.filter(t => t.result === 'TP');
   const losses = closed.filter(t => t.result === 'Loss');
-  const pnlSum = closed.reduce((s,t) => s + (parseFloat(t.pnl)||0), 0);
+  const commSum = closed.reduce((s,t) => {
+    const lots = parseFloat(t.lots) || 1;
+    const comm = t.commission !== undefined && t.commission !== null ? parseFloat(t.commission) : getCommission(t.asset, lots);
+    return s + (isNaN(comm) ? 0 : comm);
+  }, 0);
+  const pnlSum = closed.reduce((s,t) => s + (parseFloat(t.pnl)||0), 0) - commSum;
   const wr     = closed.length ? wins.length / closed.length * 100 : 0;
   const bal    = INIT + pnlSum;
   const ret    = INIT ? pnlSum / INIT * 100 : 0;
