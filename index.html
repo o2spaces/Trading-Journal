@@ -2408,7 +2408,21 @@ function tsCalNext() {
 function applyTsSort(arr) {
   return arr.sort((a,b) => {
     let va, vb;
-    if (tsSortKey==='date') { va=new Date(a.date||a.createdAt); vb=new Date(b.date||b.createdAt); }
+    if (tsSortKey==='date') {
+      // รวม date + timeEntry เพื่อเรียงตามเวลาเข้าออเดอร์จริง
+      const toHHMM = v => {
+        if (!v) return '00:00';
+        const s = String(v);
+        const iso = s.match(/T(\d{2}):(\d{2})/);
+        if (iso) return iso[1] + ':' + iso[2];
+        const plain = s.match(/^(\d{1,2}):(\d{2})/);
+        if (plain) return plain[1].padStart(2,'0') + ':' + plain[2];
+        return '00:00';
+      };
+      const da = (a.date||'').split('T')[0] + 'T' + toHHMM(a.timeEntry);
+      const db = (b.date||'').split('T')[0] + 'T' + toHHMM(b.timeEntry);
+      va = da; vb = db;
+    }
     else if (tsSortKey==='pnl') { va=parseFloat(a.pnl)||0; vb=parseFloat(b.pnl)||0; }
     else if (tsSortKey==='rr') { va=parseFloat(a.rr)||0; vb=parseFloat(b.rr)||0; }
     else if (tsSortKey==='risk') { va=parseFloat(a.risk)||0; vb=parseFloat(b.risk)||0; }
