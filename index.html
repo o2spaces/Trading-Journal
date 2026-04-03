@@ -3041,7 +3041,7 @@ function openEditTrade(tradeId) {
   setVal('eFSL',     t.priceSL     || '');
   setSel('eFResult', t.result);
   // ✅ Max RR
-  setVal('eFMaxRR',  t.maxRR > 0 ? t.maxRR : '');
+  setVal('eFMaxRR',  (t.maxRR != null && t.maxRR !== '') ? t.maxRR : '');
   setVal('eFPicture', t.pictureUrl || '');
   setVal('eFTip',     t.tip        || '');
 
