@@ -620,6 +620,84 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:8px;font-family:'Outfit',sans-serif;
 }
 .edit-save-btn:hover { background:var(--accent2);box-shadow:0 4px 20px rgba(26,108,255,0.35); }
+
+/* ══ AI SCAN ══ */
+.ai-scan-wrap{background:linear-gradient(135deg,rgba(61,158,255,0.06),rgba(0,229,255,0.04));border:1px solid rgba(61,158,255,0.22);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+.ai-scan-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ai-scan-title{font-size:12px;font-weight:700;color:var(--blue);display:flex;align-items:center;gap:6px;letter-spacing:0.3px;}
+.ai-scan-badge{font-size:9px;background:rgba(61,158,255,0.15);color:var(--cyan);border:1px solid rgba(0,229,255,0.3);border-radius:20px;padding:2px 8px;font-weight:700;letter-spacing:0.5px;}
+.ai-drop-zone{border:2px dashed rgba(61,158,255,0.3);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(61,158,255,0.04);position:relative;outline:none;}
+.ai-drop-zone:hover,.ai-drop-zone.drag{border-color:var(--blue);background:rgba(61,158,255,0.10);}
+.ai-drop-zone.pasted{border-color:var(--green);background:rgba(0,217,126,0.08);animation:scanFlash 0.5s ease;}
+@keyframes scanFlash{0%{transform:scale(1.015);}100%{transform:scale(1);}}
+.ai-drop-text{font-size:11px;color:var(--muted2);font-weight:500;}
+.ai-drop-hint{font-size:10px;color:var(--muted);margin-top:5px;}
+.ai-drop-kbd{background:rgba(255,255,255,0.06);border:1px solid var(--border3);border-radius:4px;padding:1px 7px;font-family:'Space Mono',monospace;font-size:10px;color:var(--blue);}
+.ai-preview-img{max-width:100%;max-height:160px;border-radius:8px;display:none;margin-top:8px;object-fit:contain;}
+.ai-scan-btn{width:100%;margin-top:10px;padding:10px;background:linear-gradient(135deg,var(--accent),var(--blue2));color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:0.3px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.ai-scan-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px);}
+.ai-scan-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.ai-result-box{margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.25);border:1px solid var(--border2);border-radius:8px;font-size:11px;line-height:1.7;display:none;}
+.ai-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.ai-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(61,158,255,0.1);border:1px solid rgba(61,158,255,0.25);border-radius:20px;padding:3px 10px;font-size:10px;white-space:nowrap;}
+.ai-pill-key{color:var(--muted2);}
+.ai-pill-val{color:var(--blue);font-family:'Space Mono',monospace;font-weight:700;}
+.ai-key-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+.ai-key-input{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:'Space Mono',monospace;width:100%;outline:none;}
+.ai-key-input:focus{border-color:var(--blue);}
+.ai-key-save-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;}
+.ai-key-label{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:0.3px;text-transform:uppercase;}
+.ai-prov-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.ai-prov-btn{font-size:10px;padding:4px 11px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;transition:all 0.15s;}
+.ai-prov-btn.active{background:rgba(61,158,255,0.15);border-color:var(--blue);color:var(--blue);}
+.ai-toggle{font-size:10px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;font-family:'Outfit',sans-serif;margin-left:auto;}
+.ai-key-section{display:none;margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:8px;}
+.ai-model-row{display:grid;grid-template-columns:1fr;gap:4px;margin-bottom:8px;}
+.ai-model-select{background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:'Outfit',sans-serif;width:100%;outline:none;cursor:pointer;}
+.ai-model-select:focus{border-color:var(--blue);}
+
+/* ══ CONFIRM MODAL ══ */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;backdrop-filter:blur(4px);}
+.confirm-overlay.show{opacity:1;pointer-events:all;}
+.confirm-modal{background:var(--card);border:1px solid var(--border2);border-radius:16px;width:560px;max-width:94vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.6);transform:translateY(12px) scale(0.98);transition:transform 0.22s;}
+.confirm-overlay.show .confirm-modal{transform:translateY(0) scale(1);}
+.confirm-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border2);}
+.confirm-title{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.confirm-body{overflow-y:auto;padding:16px 20px;flex:1;}
+.confirm-footer{padding:12px 20px;border-top:1px solid var(--border2);display:flex;gap:8px;justify-content:flex-end;background:rgba(0,0,0,0.2);}
+.cf-section{margin-bottom:14px;}
+.cf-section-title{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.cf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;}
+.cf-item{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+.cf-item.highlight{border-color:rgba(61,158,255,0.35);background:rgba(61,158,255,0.07);}
+.cf-key{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:3px;}
+.cf-val{font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);word-break:break-all;}
+.cf-val.pos{color:var(--green);} .cf-val.neg{color:var(--red);} .cf-val.blue{color:var(--blue);} .cf-val.cyan{color:var(--cyan);}
+.cf-price-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px;}
+.cf-price-card{border-radius:10px;padding:10px 12px;text-align:center;border:1px solid var(--border2);}
+.cf-price-card.entry{border-color:rgba(61,158,255,0.4);background:rgba(61,158,255,0.08);}
+.cf-price-card.tp{border-color:rgba(0,217,126,0.4);background:rgba(0,217,126,0.08);}
+.cf-price-card.sl{border-color:rgba(255,71,87,0.4);background:rgba(255,71,87,0.08);}
+.cf-price-label{font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:4px;}
+.cf-price-label.entry{color:var(--blue);} .cf-price-label.tp{color:var(--green);} .cf-price-label.sl{color:var(--red);}
+.cf-price-num{font-size:16px;font-weight:800;font-family:'Space Mono',monospace;}
+.cf-price-num.entry{color:var(--blue);} .cf-price-num.tp{color:var(--green);} .cf-price-num.sl{color:var(--red);}
+.cf-price-sub{font-size:9px;color:var(--muted);margin-top:2px;}
+.cf-result-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:800;}
+.cf-result-badge.tp{background:rgba(0,217,126,0.15);border:1px solid rgba(0,217,126,0.4);color:var(--green);}
+.cf-result-badge.loss{background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.4);color:var(--red);}
+.cf-result-badge.miss{background:rgba(90,122,154,0.15);border:1px solid rgba(90,122,154,0.4);color:var(--muted2);}
+.cf-pnl-big{text-align:center;padding:14px;background:var(--card2);border-radius:10px;border:1px solid var(--border2);margin-bottom:14px;}
+.cf-pnl-amount{font-size:28px;font-weight:800;font-family:'Space Mono',monospace;}
+.cf-pnl-amount.pos{color:var(--green);text-shadow:0 0 24px rgba(0,217,126,0.4);}
+.cf-pnl-amount.neg{color:var(--red);text-shadow:0 0 24px rgba(255,71,87,0.4);}
+.cf-pnl-amount.zero{color:var(--muted2);}
+.cf-pnl-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.btn-confirm-save{background:linear-gradient(135deg,#1a6cff,#0d4ecc);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;}
+.btn-confirm-save:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-confirm-cancel{background:transparent;color:var(--muted2);border:1px solid var(--border2);border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.15s;}
+.btn-confirm-cancel:hover{border-color:var(--border3);color:var(--text);}
+
 </style>
 </head>
 <body>
@@ -1063,6 +1141,50 @@ input[type="time"]::-webkit-calendar-picker-indicator {
           <select id="fPortfolio"></select>
         </div>
 
+
+        <!-- ══ AI SCAN ══ -->
+        <div class="ai-scan-wrap" id="aiScanWrap">
+          <div class="ai-scan-header">
+            <div class="ai-scan-title">🤖 Scan Chart with AI <span class="ai-scan-badge" id="aiProvBadge">No Key</span></div>
+            <button class="ai-toggle" onclick="toggleAiKey()">⚙️ API Key</button>
+          </div>
+          <!-- API Key section -->
+          <div class="ai-key-section" id="aiKeySection">
+            <div class="ai-prov-row">
+              <button class="ai-prov-btn active" id="pbGemini"    onclick="setAiProv('gemini')">Gemini ⭐ฟรี</button>
+              <button class="ai-prov-btn"        id="pbGroq"      onclick="setAiProv('groq')">Groq ฟรี</button>
+              <button class="ai-prov-btn"        id="pbOpenai"    onclick="setAiProv('openai')">OpenAI</button>
+              <button class="ai-prov-btn"        id="pbAnthropic" onclick="setAiProv('anthropic')">Claude</button>
+            </div>
+            <div class="ai-key-label">API Key (<span id="aiProvLabel">Gemini</span>)</div>
+            <div class="ai-key-row">
+              <input class="ai-key-input" id="aiKeyInput" type="password" placeholder="ใส่ API Key...">
+              <button class="ai-key-save-btn" onclick="saveAiKey()">💾 บันทึก</button>
+            </div>
+            <div class="ai-key-label" style="margin-top:8px;">Model</div>
+            <div class="ai-model-row">
+              <select class="ai-model-select" id="aiModelSelect" onchange="saveAiModel()"></select>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:6px;">
+              Gemini: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--cyan);">aistudio.google.com</a>
+              &nbsp;|&nbsp; Groq: <a href="https://console.groq.com" target="_blank" style="color:var(--cyan);">console.groq.com</a>
+            </div>
+          </div>
+          <!-- Drop Zone -->
+          <div class="ai-drop-zone" id="aiDropZone" tabindex="0"
+               onclick="aiTriggerFile()" ondragover="aiDragOver(event)" ondrop="aiDrop(event)" onpaste="aiPaste(event)" style="outline:none;">
+            <div id="aiDropPrompt">
+              <div style="font-size:22px;margin-bottom:5px;">📸</div>
+              <div class="ai-drop-text">คลิก หรือ ลาก Screenshot มาวาง</div>
+              <div class="ai-drop-hint">กด <kbd class="ai-drop-kbd">Ctrl+V</kbd> วางรูปจาก Clipboard ได้เลย</div>
+            </div>
+            <img id="aiPreviewImg" class="ai-preview-img">
+          </div>
+          <input type="file" id="aiFileInput" accept="image/*" style="display:none;" onchange="aiFileChange(event)">
+          <button class="ai-scan-btn" id="aiScanBtn" onclick="doAiScan()">🤖 Scan &amp; Auto Fill</button>
+          <div class="ai-result-box" id="aiResultBox"></div>
+        </div>
+
         <!-- ROW 1: Day(week) / Session / Date / Time Slot -->
         <div class="form-row cols4">
           <div class="field">
@@ -1312,7 +1434,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
           </div>
         </div>
 
-        <button class="save-btn" id="saveBtn" onclick="saveTrade()">💾 Save Trade</button>
+        <button class="save-btn" id="saveBtn" onclick="showConfirm()">💾 Save Trade</button>
       </div>
 
       <!-- ── SETTINGS SECTION ── -->
@@ -1637,7 +1759,7 @@ function calcPnlFromRisk() {
 // ════════════════════════════════════════
 // SAVE TRADE
 // ════════════════════════════════════════
-function saveTrade() {
+function _doSaveTrade() {
   const trade = collectForm();
   if (!trade) return;
   const portId = trade.portfolioId;
@@ -3327,6 +3449,454 @@ function deleteTrade(tradeId) {
     .catch(e => toast('⚠️ Local OK แต่ซิงค์ไม่ได้: ' + e.message, 'error'));
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// AI SCAN ENGINE
+// ═══════════════════════════════════════════════════════
+var AI_PROV   = localStorage.getItem('ai_prov')   || 'gemini';
+var AI_KEYS   = JSON.parse(localStorage.getItem('ai_keys')   || '{}');
+var AI_MODELS = JSON.parse(localStorage.getItem('ai_models') || '{}');
+var AI_B64    = null;
+
+var AI_MODEL_LIST = {
+  gemini: [
+    {v:'gemini-2.0-flash',               l:'gemini-2.0-flash ⭐ ฟรี Vision'},
+    {v:'gemini-2.5-flash-preview-05-20', l:'gemini-2.5-flash-preview ฟรี'},
+    {v:'gemini-1.5-flash',               l:'gemini-1.5-flash ฟรี'},
+    {v:'gemini-1.5-pro',                 l:'gemini-1.5-pro (จ่าย)'},
+  ],
+  groq: [
+    {v:'meta-llama/llama-4-scout-17b-16e-instruct', l:'meta-llama/llama-4-scout 👁 ฟรี'},
+    {v:'llama-4-scout-17b-16e-instruct',            l:'llama-4-scout-17b 👁 ฟรี'},
+    {v:'llama-4-maverick-17b-128e-instruct',        l:'llama-4-maverick-17b 👁 ฟรี'},
+    {v:'llama-3.2-11b-vision-preview',              l:'llama-3.2-11b-vision 👁 ฟรี'},
+    {v:'llama-3.2-90b-vision-preview',              l:'llama-3.2-90b-vision 👁'},
+    {v:'llama-3.3-70b-versatile',                   l:'llama-3.3-70b (ไม่มี Vision)'},
+  ],
+  openai: [
+    {v:'gpt-4o',      l:'gpt-4o ⭐ Vision'},
+    {v:'gpt-4o-mini', l:'gpt-4o-mini Vision (ถูกกว่า)'},
+    {v:'gpt-4-turbo', l:'gpt-4-turbo Vision'},
+  ],
+  anthropic: [
+    {v:'claude-sonnet-4-5',         l:'claude-sonnet-4-5 ⭐ Vision'},
+    {v:'claude-opus-4-5',           l:'claude-opus-4-5 Vision'},
+    {v:'claude-haiku-4-5-20251001', l:'claude-haiku-4-5 Vision (เร็ว)'},
+  ]
+};
+
+// ── Session helpers (GMT-based) ──────────────────────────
+function localTimeToGMTHr(timeStr) {
+  var parts = timeStr.split(':');
+  var m = ((parseInt(parts[0])*60 + parseInt(parts[1]||'0') + new Date().getTimezoneOffset()) % 1440 + 1440) % 1440;
+  return {hr: Math.floor(m/60), str: String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+}
+function gmtHrToSession(g) {
+  if (g >= 0  && g < 7)  return 'AS';
+  if (g >= 7  && g < 16) return 'LO';
+  if (g >= 16 && g < 21) return 'NY';
+  return 'Out';
+}
+function localTimeToSession(timeStr) {
+  return gmtHrToSession(localTimeToGMTHr(timeStr).hr);
+}
+
+// ── Provider / Model UI ──────────────────────────────────
+function renderAiModels(p) {
+  var sel = document.getElementById('aiModelSelect');
+  if (!sel) return;
+  var list = AI_MODEL_LIST[p] || [];
+  sel.innerHTML = list.map(function(m){ return '<option value="'+m.v+'">'+m.l+'</option>'; }).join('');
+  var saved = AI_MODELS[p];
+  if (saved && list.find(function(m){return m.v===saved;})) sel.value = saved;
+  else if (list.length) { sel.value = list[0].v; AI_MODELS[p] = list[0].v; }
+}
+function saveAiModel() {
+  var sel = document.getElementById('aiModelSelect');
+  if (sel) { AI_MODELS[AI_PROV] = sel.value; localStorage.setItem('ai_models', JSON.stringify(AI_MODELS)); }
+}
+function getAiModel() {
+  var sel = document.getElementById('aiModelSelect');
+  return (sel && sel.value) || (AI_MODEL_LIST[AI_PROV] && AI_MODEL_LIST[AI_PROV][0].v) || '';
+}
+function setAiProv(p) {
+  AI_PROV = p;
+  localStorage.setItem('ai_prov', p);
+  ['gemini','groq','openai','anthropic'].forEach(function(x) {
+    var b = document.getElementById('pb'+x.charAt(0).toUpperCase()+x.slice(1));
+    if (b) b.classList.toggle('active', x === p);
+  });
+  var lbl = {gemini:'Gemini',groq:'Groq',openai:'OpenAI',anthropic:'Claude'};
+  var l = document.getElementById('aiProvLabel'); if (l) l.textContent = lbl[p]||p;
+  var i = document.getElementById('aiKeyInput');  if (i) i.value = AI_KEYS[p]||'';
+  renderAiModels(p);
+  updateAiBadge();
+}
+function saveAiKey() {
+  var v = (document.getElementById('aiKeyInput').value||'').trim();
+  AI_KEYS[AI_PROV] = v;
+  localStorage.setItem('ai_keys', JSON.stringify(AI_KEYS));
+  saveAiModel();
+  updateAiBadge();
+  var btn = document.querySelector('.ai-key-save-btn');
+  if (btn) { btn.textContent = '✓ บันทึกแล้ว'; setTimeout(function(){btn.textContent='💾 บันทึก';},1800); }
+}
+function updateAiBadge() {
+  var b = document.getElementById('aiProvBadge'); if (!b) return;
+  var k  = AI_KEYS[AI_PROV];
+  var mo = getAiModel();
+  var ms = mo ? mo.split('/').pop().replace(/-\d{8}$/,'') : '';
+  b.textContent = k ? (AI_PROV.toUpperCase()+(ms?' · '+ms:'')) : 'No Key';
+  b.style.color       = k ? 'var(--green)' : 'var(--red)';
+  b.style.borderColor = k ? 'rgba(0,217,126,0.4)' : 'rgba(255,71,87,0.4)';
+  b.style.background  = k ? 'rgba(0,217,126,0.1)' : 'rgba(255,71,87,0.1)';
+}
+function toggleAiKey() {
+  var s = document.getElementById('aiKeySection');
+  s.style.display = s.style.display==='block' ? 'none' : 'block';
+  if (s.style.display==='block') setAiProv(AI_PROV);
+}
+
+// ── File / Paste / Drop ──────────────────────────────────
+function aiTriggerFile(){ document.getElementById('aiFileInput').click(); }
+function aiDragOver(e){ e.preventDefault(); document.getElementById('aiDropZone').classList.add('drag'); }
+function aiDrop(e){
+  e.preventDefault(); document.getElementById('aiDropZone').classList.remove('drag');
+  var f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) aiLoadFile(f);
+}
+function aiFileChange(e){ var f=e.target.files[0]; if(f) aiLoadFile(f); }
+function aiPaste(e){
+  var items=e.clipboardData&&e.clipboardData.items; if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.startsWith('image/')){e.preventDefault();aiLoadFile(items[i].getAsFile());return;}
+  }
+}
+document.addEventListener('paste',function(e){
+  var ov=document.getElementById('modalOverlay');
+  if(!ov||!ov.classList.contains('show')) return;
+  var items=e.clipboardData&&e.clipboardData.items; if(!items) return;
+  for(var i=0;i<items.length;i++){
+    if(items[i].type.startsWith('image/')){e.preventDefault();aiLoadFile(items[i].getAsFile());return;}
+  }
+});
+function aiLoadFile(file){
+  var r=new FileReader();
+  r.onload=function(e){
+    AI_B64=e.target.result.split(',')[1];
+    var img=document.getElementById('aiPreviewImg');
+    img.src=e.target.result; img.style.display='block';
+    document.getElementById('aiDropPrompt').style.display='none';
+    var z=document.getElementById('aiDropZone');
+    z.classList.add('pasted'); setTimeout(function(){z.classList.remove('pasted');},600);
+  };
+  r.readAsDataURL(file);
+}
+
+// ── Vision API call ──────────────────────────────────────
+async function callVisionAI(b64, prompt) {
+  var k=AI_KEYS[AI_PROV], mo=getAiModel();
+  if (!k) throw new Error('ยังไม่ได้ตั้งค่า API Key สำหรับ '+AI_PROV);
+  if (!mo) throw new Error('กรุณาเลือก Model');
+  if (AI_PROV==='gemini') {
+    var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mo+':generateContent?key='+k,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({contents:[{parts:[{text:prompt},{inline_data:{mime_type:'image/jpeg',data:b64}}]}]})});
+    var d=await r.json(); if(d.error) throw new Error(d.error.message);
+    return d.candidates[0].content.parts[0].text;
+  }
+  if (AI_PROV==='groq') {
+    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',
+      {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},
+       body:JSON.stringify({model:mo,max_tokens:900,messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}}]}]})});
+    var d=await r.json(); if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+    return d.choices[0].message.content;
+  }
+  if (AI_PROV==='openai') {
+    var r=await fetch('https://api.openai.com/v1/chat/completions',
+      {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},
+       body:JSON.stringify({model:mo,max_tokens:900,messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+b64}}]}]})});
+    var d=await r.json(); if(d.error) throw new Error(d.error.message);
+    return d.choices[0].message.content;
+  }
+  if (AI_PROV==='anthropic') {
+    var r=await fetch('https://api.anthropic.com/v1/messages',
+      {method:'POST',headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+       body:JSON.stringify({model:mo,max_tokens:900,messages:[{role:'user',content:[{type:'text',text:prompt},{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}}]}]})});
+    var d=await r.json(); if(d.error) throw new Error(d.error.message);
+    return d.content[0].text;
+  }
+  throw new Error('ไม่รู้จัก provider: '+AI_PROV);
+}
+
+// ── Main Scan ────────────────────────────────────────────
+async function doAiScan() {
+  if (!AI_B64) { alert('กรุณาวางหรืออัปโหลดรูปก่อน'); return; }
+  if (!AI_KEYS[AI_PROV]) {
+    document.getElementById('aiKeySection').style.display='block';
+    setAiProv(AI_PROV);
+    alert('กรุณาใส่ API Key ก่อน แล้วกด บันทึก');
+    return;
+  }
+  var btn=document.getElementById('aiScanBtn');
+  var box=document.getElementById('aiResultBox');
+  btn.disabled=true; btn.innerHTML='⏳ กำลัง Scan...';
+  box.style.display='block';
+  box.innerHTML='<span style="color:var(--muted);">🔍 AI กำลังวิเคราะห์ภาพ...</span>';
+
+  var prompt = [
+    'You are an expert trading screenshot OCR assistant for TradingView (Thai language UI).',
+    'Analyze this trading chart/order screenshot carefully and extract ALL fields below.',
+    '',
+    '=== FIELDS TO EXTRACT ===',
+    '',
+    '1. ASSET — title bar instrument (e.g. "MNQ1!", "NQ1!", "GC1!", "MGC1!", "XAUUSD") → return WITHOUT "!" → "MNQ1"',
+    '',
+    '2. ENTRY PRICE — Thai label "ราคาเข้าซื้อ" → the number in the field next to it',
+    '',
+    '3. TARGET (TP) — Thai section "ระดับการทำกำไร" → find "ราคา" value (NOT the Tick count)',
+    '   Example: Tick:260, ราคา:24892.75 → target = "24892.75"',
+    '',
+    '4. STOP LOSS (SL) — Thai section "ระดับการหยุดขาดทุน" → find "ราคา" value (NOT Tick)',
+    '   Example: Tick:13, ราคา:24961.00 → sl = "24961.00"',
+    '',
+    '5. SIDE — "สถานะ Short" = Short | "สถานะ Long" = Long | "ขาย" = Short | "ซื้อ" = Long',
+    '',
+    '6. ENTRY TIME — Look at the bottom X-AXIS of the chart.',
+    '   Find the LEFTMOST blue highlighted timestamp label.',
+    '   Thai month: ม.ค.=01 ก.พ.=02 มี.ค.=03 เม.ย.=04 พ.ค.=05 มิ.ย.=06 ก.ค.=07 ส.ค.=08 ก.ย.=09 ต.ค.=10 พ.ย.=11 ธ.ค.=12',
+    '   Year: "26"=2026. Return time as "HH:MM" and date as "YYYY-MM-DD".',
+    '',
+    '7. EXIT TIME (TIME EXITED) — CRITICAL:',
+    '   Look for the RIGHTMOST blue highlighted timestamp on the X-AXIS.',
+    '   This is the trade exit/close time. Return as "HH:MM".',
+    '   If only ONE blue marker visible, return "".',
+    '',
+    '8. LOTS/SIZE — Thai: "ขนาด Lot" → number (e.g. 1)',
+    '',
+    'Return ONLY raw JSON, no markdown, no explanation:',
+    '{"asset":"","side":"Long","entry":"","target":"","sl":"","lots":"","entry_time":"","entry_date":"","exit_time":""}'
+  ].join('\n');
+
+  try {
+    var res=await callVisionAI(AI_B64, prompt);
+    var clean=res.replace(/```json|```/g,'').trim();
+    var jm=clean.match(/\{[\s\S]*\}/); if(jm) clean=jm[0];
+    var d=JSON.parse(clean);
+    var filled=[];
+
+    // Asset
+    if (d.asset) {
+      var raw=(d.asset+'').replace('!','').trim().toUpperCase();
+      var sel=document.getElementById('fAsset');
+      var opt=Array.from(sel.options).find(function(o){return o.value.toUpperCase()===raw;});
+      if (opt) { sel.value=opt.value; filled.push({k:'Asset',v:opt.value}); }
+    }
+
+    // Entry price
+    if (d.entry&&d.entry!=='') {
+      var ev=parseFloat((d.entry+'').replace(/[^0-9.-]/g,''));
+      if (!isNaN(ev)) { document.getElementById('fEntry').value=ev; filled.push({k:'Entry',v:ev}); }
+    }
+
+    // Target
+    if (d.target&&d.target!=='') {
+      var tv=parseFloat((d.target+'').replace(/[^0-9.-]/g,''));
+      if (!isNaN(tv)) { document.getElementById('fTarget').value=tv; filled.push({k:'Target',v:tv}); }
+    }
+
+    // Stop Loss
+    if (d.sl&&d.sl!=='') {
+      var sv=parseFloat((d.sl+'').replace(/[^0-9.-]/g,''));
+      if (!isNaN(sv)) { document.getElementById('fSL').value=sv; filled.push({k:'SL',v:sv}); }
+    }
+
+    // Entry Date
+    if (d.entry_date&&d.entry_date!=='') {
+      document.getElementById('fDate').value=d.entry_date;
+      filled.push({k:'Date',v:d.entry_date});
+      // Auto Day-of-week
+      try {
+        var dt=new Date(d.entry_date+'T00:00:00');
+        var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var dayStr=days[dt.getDay()];
+        var dayOpt=Array.from(document.getElementById('fDay').options).find(function(o){return o.value===dayStr;});
+        if (dayOpt) { document.getElementById('fDay').value=dayStr; filled.push({k:'Day',v:dayStr}); }
+      } catch(e) {}
+    }
+
+    // Entry Time → Session + TimeSlot
+    if (d.entry_time&&d.entry_time!=='') {
+      var timeStr=d.entry_time.substring(0,5);
+      document.getElementById('fTimeEntry').value=timeStr;
+      filled.push({k:'Time Entry',v:timeStr});
+
+      // GMT-based session
+      var gmt=localTimeToGMTHr(timeStr);
+      var session=gmtHrToSession(gmt.hr);
+      document.getElementById('fSession').value=session;
+      filled.push({k:'Session (GMT '+gmt.str+')',v:session});
+
+      // TimeSlot (local hour)
+      var lhr=parseInt(timeStr.split(':')[0]);
+      var slotMap=[[5,7,'05:00-07:00'],[7,9,'07:00-09:00'],[9,11,'09:00-11:00'],
+        [11,14,'11:00-14:00'],[14,16,'14:00-16:00'],[16,18,'16:00-18:00'],
+        [18,19,'18:00-19:00'],[19,21,'19:00-21:00'],[21,23,'21:00-23:00'],[23,25,'23:00-01:00']];
+      var slot=slotMap.find(function(s){return lhr>=s[0]&&lhr<s[1];});
+      if (slot) { document.getElementById('fTimeSlot').value=slot[2]; filled.push({k:'Time Slot',v:slot[2]}); }
+    }
+
+    // EXIT TIME → fTimeExited + auto-calc duration
+    if (d.exit_time&&d.exit_time!=='') {
+      var exitStr=d.exit_time.substring(0,5);
+      var exitEl=document.getElementById('fTimeExited');
+      if (exitEl) {
+        exitEl.value=exitStr;
+        filled.push({k:'Time Exited',v:exitStr});
+        // Auto duration
+        if (d.entry_time&&d.entry_time!=='') {
+          var ep=d.entry_time.substring(0,5).split(':');
+          var xp=exitStr.split(':');
+          var diff=(parseInt(xp[0])*60+parseInt(xp[1]))-(parseInt(ep[0])*60+parseInt(ep[1]));
+          if (diff<0) diff+=1440; // cross midnight
+          var durEl=document.getElementById('fDuration');
+          if (durEl&&diff>0) { durEl.value=diff; filled.push({k:'Duration',v:diff+' นาที'}); }
+        }
+      }
+    }
+
+    // Lots
+    if (d.lots&&d.lots!=='') {
+      var lv=parseFloat((d.lots+'').replace(/[^0-9.-]/g,''));
+      // Note: fLot is readonly auto-calc, but we fill fDuration only; lots come from calcAuto
+    }
+
+    calcAuto();
+
+    // Result pills
+    var pills=filled.map(function(f){
+      return '<span class="ai-pill"><span class="ai-pill-key">'+f.k+'</span><span class="ai-pill-val">'+f.v+'</span></span>';
+    }).join('');
+    box.innerHTML='<div style="font-size:11px;margin-bottom:7px;">✅ <strong>Scan สำเร็จ!</strong> กรอก <strong style="color:var(--green);">'+filled.length+'</strong> ช่อง</div>'
+      +'<div class="ai-pills">'+pills+'</div>';
+
+    setTimeout(function(){
+      var el=document.getElementById('fEntry');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },200);
+
+  } catch(err) {
+    box.innerHTML='<span style="color:var(--red);">❌ Error: '+err.message+'</span>';
+    console.error('AI Scan error:',err);
+  }
+  btn.disabled=false; btn.innerHTML='🤖 Scan &amp; Auto Fill';
+}
+
+// Init on load
+document.addEventListener('DOMContentLoaded', function(){ updateAiBadge(); setAiProv(AI_PROV); });
+
+// ═══════════════════════════════════════════════════════
+// CONFIRM MODAL
+// ═══════════════════════════════════════════════════════
+var _pendingTrade = null;
+
+function showConfirm() {
+  var trade = collectForm();
+  if (!trade) return;
+  _pendingTrade = trade;
+
+  var port     = portfolios.find(function(p){return p.id===trade.portfolioId;});
+  var portName = port ? port.name : trade.portfolioId;
+  var pnl      = trade.pnl || 0;
+  var pnlSign  = pnl > 0 ? '+' : '';
+  var pnlCls   = pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : 'zero';
+  var resultIcon = {TP:'🟢',Loss:'🔴',Miss:'⚪'}[trade.result] || '—';
+  var resultCls  = {TP:'tp',Loss:'loss',Miss:'miss'}[trade.result] || 'miss';
+  var posLabel   = trade.position || (trade.priceEntry>0&&trade.priceTarget>0 ? (trade.priceTarget>trade.priceEntry?'Buy / Long':'Sell / Short') : '—');
+  var fmt = function(n,d){ return (typeof n==='number'&&!isNaN(n)) ? n.toFixed(d||2) : (n||'—'); };
+
+  // Duration display
+  var durDisplay = '';
+  if (trade.timeEntry && trade.timeExited) {
+    var ep2 = trade.timeEntry.split(':');
+    var xp2 = trade.timeExited.split(':');
+    var diff2 = (parseInt(xp2[0])*60+parseInt(xp2[1]))-(parseInt(ep2[0])*60+parseInt(ep2[1]));
+    if (diff2 < 0) diff2 += 1440;
+    durDisplay = diff2 + ' นาที';
+  } else if (trade.duration > 0) {
+    durDisplay = trade.duration + ' นาที';
+  }
+
+  var html = '\n'
+    + '<div class="cf-pnl-big">\n'
+    + '  <div style="margin-bottom:8px;"><span class="cf-result-badge '+resultCls+'">'+resultIcon+' '+trade.result+'</span></div>\n'
+    + '  <div class="cf-pnl-amount '+pnlCls+'">'+pnlSign+'$'+fmt(pnl)+'</div>\n'
+    + '  <div class="cf-pnl-sub">Risk $'+fmt(trade.risk)+' &nbsp;·&nbsp; RR '+fmt(trade.rr)+'R &nbsp;·&nbsp; '+(trade.lots>0?trade.lots+' contract(s)':'—')+'</div>\n'
+    + '</div>\n'
+
+    + '<div class="cf-section">\n'
+    + '  <div class="cf-section-title">📌 Price</div>\n'
+    + '  <div class="cf-price-row">\n'
+    + '    <div class="cf-price-card entry"><div class="cf-price-label entry">Entry</div><div class="cf-price-num entry">'+(trade.priceEntry>0?fmt(trade.priceEntry):'—')+'</div><div class="cf-price-sub">'+posLabel+'</div></div>\n'
+    + '    <div class="cf-price-card tp"><div class="cf-price-label tp">Target TP</div><div class="cf-price-num tp">'+(trade.priceTarget>0?fmt(trade.priceTarget):'—')+'</div><div class="cf-price-sub">RR '+fmt(trade.rr)+'R</div></div>\n'
+    + '    <div class="cf-price-card sl"><div class="cf-price-label sl">Stop Loss</div><div class="cf-price-num sl">'+(trade.priceSL>0?fmt(trade.priceSL):'—')+'</div><div class="cf-price-sub">'+fmt(trade.slPoints,1)+' ticks</div></div>\n'
+    + '  </div>\n'
+    + '</div>\n'
+
+    + '<div class="cf-section">\n'
+    + '  <div class="cf-section-title">🗓 วันที่ & เวลา</div>\n'
+    + '  <div class="cf-grid">\n'
+    + '    <div class="cf-item highlight"><div class="cf-key">Date</div><div class="cf-val blue">'+(trade.date||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Day</div><div class="cf-val">'+(trade.day||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Session</div><div class="cf-val">'+(trade.session||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Time Slot</div><div class="cf-val">'+(trade.timeSlot||'—')+'</div></div>\n'
+    + '    <div class="cf-item highlight"><div class="cf-key">🟢 Time Entry</div><div class="cf-val blue">'+(trade.timeEntry||'—')+'</div></div>\n'
+    + '    <div class="cf-item highlight"><div class="cf-key">🔴 Time Exited</div><div class="cf-val '+(trade.timeExited?'neg':'')+'">'+( trade.timeExited||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Duration</div><div class="cf-val">'+(durDisplay||'—')+'</div></div>\n'
+    + '  </div>\n'
+    + '</div>\n'
+
+    + '<div class="cf-section">\n'
+    + '  <div class="cf-section-title">📊 Asset & Strategy</div>\n'
+    + '  <div class="cf-grid">\n'
+    + '    <div class="cf-item highlight"><div class="cf-key">Asset</div><div class="cf-val cyan">'+(trade.asset||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Code</div><div class="cf-val">'+(trade.code||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Class</div><div class="cf-val">'+(trade.cls||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Mode</div><div class="cf-val">'+(trade.mode||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Model</div><div class="cf-val">'+(trade.model||'—')+'</div></div>\n'
+    + '    <div class="cf-item"><div class="cf-key">Zone</div><div class="cf-val">'+(trade.zone||'—')+'</div></div>\n'
+    + '  </div>\n'
+    + '</div>\n'
+
+    + '<div class="cf-section">\n'
+    + '  <div class="cf-section-title">💼 พอร์ต</div>\n'
+    + '  <div class="cf-grid" style="grid-template-columns:1fr;">\n'
+    + '    <div class="cf-item"><div class="cf-key">Portfolio</div><div class="cf-val">'+portName+'</div></div>\n'
+    + (trade.tip ? '    <div class="cf-item"><div class="cf-key">💡 Tip / Note</div><div class="cf-val" style="font-size:11px;font-family:\'Outfit\',sans-serif;font-weight:500;white-space:pre-wrap;">'+trade.tip+'</div></div>\n' : '')
+    + '  </div>\n'
+    + '</div>\n';
+
+  document.getElementById('confirmBody').innerHTML = html;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  _pendingTrade = null;
+}
+
+async function confirmAndSave() {
+  var btn = document.getElementById('confirmSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  closeConfirm();
+  _doSaveTrade();
+  btn.disabled = false; btn.textContent = '💾 ยืนยัน Save';
+}
+
+document.addEventListener('click', function(e){
+  var ov=document.getElementById('confirmOverlay');
+  if(e.target===ov) closeConfirm();
+});
+
 </script>
 
 <!-- SHARE MODAL -->
@@ -3552,6 +4122,22 @@ function deleteTrade(tradeId) {
       </div>
 
       <button class="edit-save-btn" onclick="saveEditTrade()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ CONFIRM TRADE MODAL ══ -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-modal">
+    <div class="confirm-hdr">
+      <div class="confirm-title">✅ ยืนยันการบันทึก Trade</div>
+      <button style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;" onclick="closeConfirm()">✕</button>
+    </div>
+    <div class="confirm-body" id="confirmBody"></div>
+    <div class="confirm-footer">
+      <button class="btn-confirm-cancel" onclick="closeConfirm()">← แก้ไข</button>
+      <button class="btn-confirm-save" id="confirmSaveBtn" onclick="confirmAndSave()">💾 ยืนยัน Save</button>
     </div>
   </div>
 </div>
