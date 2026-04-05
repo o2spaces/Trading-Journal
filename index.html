@@ -2986,6 +2986,7 @@ let _editTradeId   = null;
 let _editPortId    = null;
 let _eRiskUserEdit = false;
 let _eFilling      = false; // ป้องกัน eCalcAuto ทำงานตอน fill ข้อมูล
+let _eCommissionUserEdit = false; // flag: user กรอก commission เอง
 
 function openEditTrade(tradeId) {
   if (isViewOnly) return;
@@ -3096,9 +3097,10 @@ function openEditTrade(tradeId) {
   const commSaved = t.commission !== undefined && t.commission !== null
     ? parseFloat(t.commission)
     : getCommission(t.asset, lotsVal);
+  _eCommissionUserEdit = false; // reset flag ทุกครั้งที่เปิด modal
   const commEl2 = document.getElementById('eFCommission');
   if (commEl2) {
-    commEl2.value = commSaved > 0 ? '-$' + commSaved.toFixed(2) : lotsVal > 0 ? '$0.00' : '';
+    commEl2.value = commSaved > 0 ? commSaved.toFixed(2) : '0';
     commEl2.style.color = commSaved > 0 ? 'var(--red)' : 'var(--muted)';
   }
 
@@ -3118,7 +3120,7 @@ function openEditTrade(tradeId) {
 
 function closeEditTrade() {
   document.getElementById('editTradeOverlay').classList.remove('show');
-  _editTradeId = null; _editPortId = null; _eRiskUserEdit = false; _eFilling = false;
+  _editTradeId = null; _editPortId = null; _eRiskUserEdit = false; _eFilling = false; _eCommissionUserEdit = false;
 }
 
 // Auto-calc for edit form (mirrors calcAuto logic)
@@ -3163,7 +3165,10 @@ function eCalcAuto() {
   // Commission
   const commVal = getCommission(asset, lots);
   const commEl  = document.getElementById('eFCommission');
-  if (commEl) { commEl.value = commVal > 0 ? '-$' + commVal.toFixed(2) : lots > 0 ? '$0.00' : ''; commEl.style.color = commVal>0?'var(--red)':'var(--muted)'; }
+  if (commEl && !_eCommissionUserEdit) {
+    commEl.value = commVal > 0 ? commVal.toFixed(2) : lots > 0 ? '0' : '';
+    commEl.style.color = commVal > 0 ? 'var(--red)' : 'var(--muted)';
+  }
 
   // RR
   let rr = 0;
@@ -3190,6 +3195,17 @@ function eCalcPnl() {
   else if (result === 'Loss') pnl = -risk;
   const pnlEl = document.getElementById('eFPnl');
   if (pnlEl) { pnlEl.value = pnl !== 0 ? pnl.toFixed(2) : ''; pnlEl.style.color = pnl>0?'var(--green)':pnl<0?'var(--red)':''; }
+}
+
+// เมื่อ user กรอก Commission เอง
+function eCommissionManual() {
+  _eCommissionUserEdit = true;
+  const commEl = document.getElementById('eFCommission');
+  if (commEl) {
+    const v = parseFloat(commEl.value) || 0;
+    commEl.style.color = v > 0 ? 'var(--red)' : 'var(--muted)';
+  }
+  // คำนวณ Actual Risk ใหม่ (commission ไม่มีผลต่อ lots/pnl)
 }
 
 // Wire up eFRisk manual edit flag
@@ -3223,6 +3239,8 @@ function saveEditTrade() {
   const slP    = parseFloat(document.getElementById('eFSL').value)     || 0;
   const lotRaw = (document.getElementById('eFLot').value || '').replace(/[^0-9]/g, '');
   const lots   = parseInt(lotRaw) || 0;
+  // Commission: อ่านค่าจากช่องที่กรอกเอง (ตัวเลขล้วน)
+  const commRaw = parseFloat(document.getElementById('eFCommission').value) || 0;
 
   const updated = {
     ...trades[idx],
@@ -3247,7 +3265,7 @@ function saveEditTrade() {
     rr         : rr,
     pnl        : pnl,
     lots       : lots,
-    commission : getCommission(asset, lots),
+    commission : commRaw,
     maxRR      : parseFloat(document.getElementById('eFMaxRR').value)   || 0,
     pictureUrl : document.getElementById('eFPicture').value,
     position   : entry > 0 && slP > 0 ? (entry > slP ? 'Buy' : 'Sell') : trades[idx].position,
@@ -3517,8 +3535,8 @@ function deleteTrade(tradeId) {
             <input type="text" id="eFLot" readonly style="color:var(--cyan);">
           </div>
           <div class="field">
-            <label>Commission $ <span style="font-size:9px;background:rgba(255,71,87,0.12);color:var(--red);padding:1px 5px;border-radius:4px;font-weight:700;">Topstep</span></label>
-            <input type="text" id="eFCommission" readonly style="color:var(--red);">
+            <label>Commission $ <span style="font-size:9px;background:rgba(255,71,87,0.12);color:var(--red);padding:1px 5px;border-radius:4px;font-weight:700;">Topstep</span> <span style="font-size:9px;background:rgba(255,154,60,0.15);color:var(--orange);padding:1px 5px;border-radius:4px;font-weight:700;">Editable</span></label>
+            <input type="number" id="eFCommission" step="0.01" min="0" placeholder="0.00" oninput="eCommissionManual()" style="color:var(--red);">
           </div>
           <div class="field">
             <label>Actual Risk $ <span class="calc-badge">Auto</span></label>
